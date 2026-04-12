@@ -1,0 +1,31 @@
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { Logger } from '@nestjs/common';
+
+import { ValidationPipe } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // Global validation
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
+
+  // Global API prefix for all REST endpoints
+  app.setGlobalPrefix('api');
+
+  // Enable CORS for frontend development
+  app.enableCors();
+
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+
+  const logger = new Logger('Bootstrap');
+  logger.log(`🥔 Potato Platform API running on http://localhost:${port}/api`);
+}
+bootstrap();
+

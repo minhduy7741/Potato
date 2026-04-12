@@ -1,0 +1,244 @@
+import { PrismaService } from '../prisma/prisma.service';
+import { DockerService } from '../docker/docker.service';
+import { NginxService } from '../infrastructure/nginx.service';
+import { SslService } from '../infrastructure/ssl.service';
+export declare class ProjectsService {
+    private readonly prisma;
+    private readonly dockerService;
+    private readonly nginxService;
+    private readonly sslService;
+    private readonly logger;
+    constructor(prisma: PrismaService, dockerService: DockerService, nginxService: NginxService, sslService: SslService);
+    createProject(userId: number, projectName: string): Promise<{
+        port: number;
+        url: string;
+        proxyUrl: string;
+        id: number;
+        name: string;
+        createdAt: Date;
+        userId: number;
+        containerId: string | null;
+        status: string;
+        ramLimit: number;
+        cpuLimit: number;
+        subdomain: string;
+        customDomain: string | null;
+        sslStatus: string;
+        sslExpiry: Date | null;
+        gitRepo: string | null;
+        deployBranch: string | null;
+        deployStatus: string | null;
+        lastDeployedAt: Date | null;
+    }>;
+    private provisionProjectBackground;
+    startProject(projectId: number): Promise<{
+        id: number;
+        name: string;
+        createdAt: Date;
+        userId: number;
+        containerId: string | null;
+        status: string;
+        ramLimit: number;
+        cpuLimit: number;
+        subdomain: string;
+        customDomain: string | null;
+        sslStatus: string;
+        sslExpiry: Date | null;
+        gitRepo: string | null;
+        deployBranch: string | null;
+        deployStatus: string | null;
+        lastDeployedAt: Date | null;
+    }>;
+    stopProject(projectId: number): Promise<{
+        id: number;
+        name: string;
+        createdAt: Date;
+        userId: number;
+        containerId: string | null;
+        status: string;
+        ramLimit: number;
+        cpuLimit: number;
+        subdomain: string;
+        customDomain: string | null;
+        sslStatus: string;
+        sslExpiry: Date | null;
+        gitRepo: string | null;
+        deployBranch: string | null;
+        deployStatus: string | null;
+        lastDeployedAt: Date | null;
+    }>;
+    updateDomain(id: number, customDomain: string | null): Promise<{
+        id: number;
+        name: string;
+        createdAt: Date;
+        userId: number;
+        containerId: string | null;
+        status: string;
+        ramLimit: number;
+        cpuLimit: number;
+        subdomain: string;
+        customDomain: string | null;
+        sslStatus: string;
+        sslExpiry: Date | null;
+        gitRepo: string | null;
+        deployBranch: string | null;
+        deployStatus: string | null;
+        lastDeployedAt: Date | null;
+    }>;
+    enableHttps(id: number): Promise<{
+        id: number;
+        name: string;
+        createdAt: Date;
+        userId: number;
+        containerId: string | null;
+        status: string;
+        ramLimit: number;
+        cpuLimit: number;
+        subdomain: string;
+        customDomain: string | null;
+        sslStatus: string;
+        sslExpiry: Date | null;
+        gitRepo: string | null;
+        deployBranch: string | null;
+        deployStatus: string | null;
+        lastDeployedAt: Date | null;
+    }>;
+    deleteProject(projectId: number): Promise<{
+        message: string;
+    }>;
+    getProjectStats(projectId: number): Promise<{
+        projectId: number;
+        projectName: string;
+        containerId: string;
+        state: string;
+        running: boolean;
+        cpu: {
+            usagePercent: number;
+        };
+        memory: {
+            usageMB: number;
+            limitMB: number;
+            usagePercent: number;
+        };
+    }>;
+    getProjectLogs(projectId: number): Promise<string>;
+    findAll(userId?: number): Promise<({
+        databases: {
+            id: number;
+            name: string;
+            createdAt: Date;
+            status: string;
+            type: string;
+            connectionString: string | null;
+            projectId: number;
+        }[];
+    } & {
+        id: number;
+        name: string;
+        createdAt: Date;
+        userId: number;
+        containerId: string | null;
+        status: string;
+        ramLimit: number;
+        cpuLimit: number;
+        subdomain: string;
+        customDomain: string | null;
+        sslStatus: string;
+        sslExpiry: Date | null;
+        gitRepo: string | null;
+        deployBranch: string | null;
+        deployStatus: string | null;
+        lastDeployedAt: Date | null;
+    })[]>;
+    findOne(projectId: number): Promise<{
+        databases: {
+            id: number;
+            name: string;
+            createdAt: Date;
+            status: string;
+            type: string;
+            connectionString: string | null;
+            projectId: number;
+        }[];
+        envVariables: {
+            id: number;
+            createdAt: Date;
+            projectId: number;
+            key: string;
+            value: string;
+            isSecret: boolean;
+        }[];
+    } & {
+        id: number;
+        name: string;
+        createdAt: Date;
+        userId: number;
+        containerId: string | null;
+        status: string;
+        ramLimit: number;
+        cpuLimit: number;
+        subdomain: string;
+        customDomain: string | null;
+        sslStatus: string;
+        sslExpiry: Date | null;
+        gitRepo: string | null;
+        deployBranch: string | null;
+        deployStatus: string | null;
+        lastDeployedAt: Date | null;
+    }>;
+    getEnvVariables(projectId: number): Promise<{
+        id: number;
+        createdAt: Date;
+        projectId: number;
+        key: string;
+        value: string;
+        isSecret: boolean;
+    }[]>;
+    addEnvVariable(projectId: number, key: string, value: string, isSecret: boolean): Promise<any>;
+    deleteEnvVariable(projectId: number, envId: number): Promise<{
+        id: number;
+        createdAt: Date;
+        projectId: number;
+        key: string;
+        value: string;
+        isSecret: boolean;
+    }>;
+    restartProject(projectId: number): Promise<void>;
+    updateResources(projectId: number, ramMB: number, cpuCores: number): Promise<{
+        id: number;
+        name: string;
+        createdAt: Date;
+        userId: number;
+        containerId: string | null;
+        status: string;
+        ramLimit: number;
+        cpuLimit: number;
+        subdomain: string;
+        customDomain: string | null;
+        sslStatus: string;
+        sslExpiry: Date | null;
+        gitRepo: string | null;
+        deployBranch: string | null;
+        deployStatus: string | null;
+        lastDeployedAt: Date | null;
+    }>;
+    deployFromGit(projectId: number, gitRepo: string, branch?: string): Promise<{
+        deploymentId: number;
+        status: string;
+        message: string;
+    }>;
+    private runGitDeployBackground;
+    getDeployments(projectId: number): Promise<{
+        log: string | null;
+        id: number;
+        createdAt: Date;
+        status: string;
+        projectId: number;
+        trigger: string;
+        gitCommit: string | null;
+        gitMessage: string | null;
+        duration: number | null;
+    }[]>;
+    private findProjectOrFail;
+    private allocatePort;
+}

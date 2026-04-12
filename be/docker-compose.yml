@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: potato
+      POSTGRES_PASSWORD: potato_password
+      POSTGRES_DB: potato_projects
+    ports:
+      - '5432:5432'
+    volumes:
+      - potato_pgdata:/var/lib/postgresql/data
+
+volumes:
+  potato_pgdata:

@@ -1,0 +1,83 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  name      String?
+  role      Role      @default(USER)
+  projects  Project[]
+  createdAt DateTime  @default(now())
+}
+
+model Project {
+  id             Int                @id @default(autoincrement())
+  name           String
+  containerId    String?
+  status         String             @default("stopped")
+  ramLimit       Int                @default(256)
+  cpuLimit       Float              @default(1)
+  subdomain      String             @unique
+  customDomain   String?            @unique
+  sslStatus      String             @default("none")
+  sslExpiry      DateTime?
+  // Git Deploy
+  gitRepo        String?
+  deployBranch   String?            @default("main")
+  deployStatus   String?            @default("idle") // idle, deploying, success, failed
+  lastDeployedAt DateTime?
+  userId         Int
+  user           User               @relation(fields: [userId], references: [id])
+  databases      DatabaseInstance[]
+  envVariables   EnvVariable[]
+  deployments    DeploymentLog[]
+  createdAt      DateTime           @default(now())
+}
+
+model EnvVariable {
+  id        Int      @id @default(autoincrement())
+  key       String
+  value     String
+  isSecret  Boolean  @default(false)
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model DeploymentLog {
+  id           Int      @id @default(autoincrement())
+  projectId    Int
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  trigger      String   @default("manual") // manual, git-push
+  status       String   @default("pending") // pending, running, success, failed
+  gitCommit    String?
+  gitMessage   String?
+  duration     Int?     // seconds
+  log          String?  @db.Text
+  createdAt    DateTime @default(now())
+}
+
+model DatabaseInstance {
+  id               Int      @id @default(autoincrement())
+  name             String
+  type             String
+  status           String   @default("provisioning")
+  connectionString String?
+  projectId        Int
+  project          Project  @relation(fields: [projectId], references: [id])
+  createdAt        DateTime @default(now())
+}
