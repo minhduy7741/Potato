@@ -5,9 +5,12 @@ export declare class DockerService {
     private readonly docker;
     constructor();
     pullImage(imageName: string): Promise<void>;
+    buildImage(contextDir: string, imageName: string, onProgress?: (msg: string) => void): Promise<void>;
+    inspectImage(imageName: string): Promise<Dockerode.ImageInspectInfo>;
     createContainer(options: Dockerode.ContainerCreateOptions): Promise<Dockerode.Container>;
     startContainer(containerId: string): Promise<void>;
     stopContainer(containerId: string): Promise<void>;
+    restartContainer(containerId: string): Promise<void>;
     removeContainer(containerId: string): Promise<void>;
     getContainer(containerId: string): Dockerode.Container;
     getContainerState(containerId: string): Promise<{
@@ -22,4 +25,10 @@ export declare class DockerService {
     }>;
     getContainerLogStream(containerId: string, tail?: number): Promise<Readable>;
     getContainerLogs(containerId: string): Promise<string>;
+    getUsedHostPorts(): Promise<Set<number>>;
+    listContainers(options?: Dockerode.ContainerListOptions): Promise<Dockerode.ContainerInfo[]>;
+    updateContainerResources(containerId: string, resources: {
+        cpuCores: number;
+        ramMB: number;
+    }): Promise<any>;
 }

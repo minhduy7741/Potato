@@ -1,4 +1,5 @@
 import { Injectable, ConflictException, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -7,62 +8,73 @@ import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
+
+  // ─── Helpers ─────────────────────────────────────────────────────────
+
+  private signToken(user: { id: number; email: string; name: string | null; role: string }) {
+    return this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      name: user.name || '',
+      role: user.role,
+    });
+  }
+
+  // ─── Register ────────────────────────────────────────────────────────
 
   async register(registerDto: RegisterDto) {
     const { email, password, name } = registerDto;
 
-    // Kiểm tra email tồn tại
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
+    const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new ConflictException('Email đã tồn tại trên hệ thống');
     }
 
-    // Hash mật khẩu
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Tạo user mới (mặc định role USER)
     const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        role: Role.USER,
-      },
+      data: { email, password: hashedPassword, name, role: Role.USER },
     });
 
-    // Trả về info (loại bỏ password)
-    const { password: _, ...result } = user;
-    return result;
+    const { password: _, ...userWithoutPassword } = user;
+    const accessToken = this.signToken(user);
+
+    return {
+      user: userWithoutPassword,
+      accessToken,
+      message: 'Đăng ký thành công',
+    };
   }
+
+  // ─── Login ────────────────────────────────────────────────────────────
 
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
       throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
     }
 
-    // Trả về info và session giả định (cho phiên bản này)
-    const { password: _, ...result } = user;
+    const { password: _, ...userWithoutPassword } = user;
+    const accessToken = this.signToken(user);
+
     return {
-      user: result,
+      user: userWithoutPassword,
+      accessToken,
       message: 'Đăng nhập thành công',
     };
   }
+
+  // ─── Profile Management ───────────────────────────────────────────────
 
   async changePassword(userId: number, currentPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -93,5 +105,24 @@ export class AuthService {
     });
     const { password: _, ...result } = updated;
     return result;
+  }
+
+  async removeAccount(userId: number, projectsService: any) {
+    // 1. Find all projects belonging to this user
+    const projects = await this.prisma.project.findMany({
+      where: { userId },
+    });
+
+    // 2. Delete each project (this handles database and container cleanup)
+    for (const project of projects) {
+      await projectsService.deleteProject(project.id);
+    }
+
+    // 3. Delete the user record
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return { message: 'Tài khoản và toàn bộ dữ liệu liên quan đã được xóa vĩnh viễn' };
   }
 }

@@ -1,8 +1,8 @@
-import { IsString, IsNotEmpty, IsNumber, MinLength } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, MinLength } from 'class-validator';
 
 /**
  * DTO for creating a new project container.
+ * Note: userId is NOT accepted here — it is read from the JWT token on the server.
  */
 export class CreateProjectDto {
   /** Display name for the project */
@@ -10,10 +10,4 @@ export class CreateProjectDto {
   @IsNotEmpty()
   @MinLength(3)
   name: string;
-
-  /** User ID who owns the project */
-  @IsNumber()
-  @IsNotEmpty()
-  @Type(() => Number)
-  userId: number;
 }

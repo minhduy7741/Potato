@@ -1,10 +1,9 @@
-import { IsString, IsNotEmpty, MinLength, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength } from 'class-validator';
 
+/**
+ * userId is NOT accepted here — it is read from the JWT token (req.user.id).
+ */
 export class ChangePasswordDto {
-  @IsNumber()
-  @IsNotEmpty()
-  userId: number;
-
   @IsString()
   @IsNotEmpty()
   currentPassword: string;

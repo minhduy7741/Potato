@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/api"
 
 interface DeploymentLogEntry {
   id: number
@@ -29,6 +30,7 @@ interface GitDeployProps {
 export function GitDeploy({ project, onUpdate }: GitDeployProps) {
   const [gitRepo, setGitRepo] = useState(project.gitRepo || "")
   const [branch, setBranch] = useState(project.deployBranch || "main")
+  const [gitToken, setGitToken] = useState(project.gitToken || "")
   const [isDeploying, setIsDeploying] = useState(false)
   const [deployments, setDeployments] = useState<DeploymentLogEntry[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
@@ -36,17 +38,10 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
 
   const fetchDeployments = async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/projects/${project.id}/deployments`)
-      if (res.ok) {
-        const data = await res.json()
-        setDeployments(data)
-        
-        // If any deployment is running, keep polling
-        const hasRunning = data.some((d: any) => d.status === 'running')
-        if (hasRunning) {
-          setTimeout(fetchDeployments, 3000)
-        }
-      }
+      const data = await apiFetch<DeploymentLogEntry[]>(`/projects/${project.id}/deployments`)
+      setDeployments(data)
+      const hasRunning = data.some((d) => d.status === 'running')
+      if (hasRunning) setTimeout(fetchDeployments, 3000)
     } catch {}
     finally { setIsLoadingHistory(false) }
   }
@@ -60,23 +55,13 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
       toast.error("Vui lòng nhập đường dẫn Git repository")
       return
     }
-
     setIsDeploying(true)
     try {
-      const res = await fetch(`http://localhost:3000/api/projects/${project.id}/deploy`, {
+      await apiFetch(`/projects/${project.id}/deploy`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gitRepo, deployBranch: branch }),
+        body: JSON.stringify({ gitRepo, deployBranch: branch, gitToken }),
       })
-
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.message || "Không thể bắt đầu deploy")
-      }
-
-      toast.success("Gieo mầm bắt đầu! 🚀", {
-        description: "Đang chuẩn bị đất và kéo mã nguồn...",
-      })
+      toast.success("Gieo mầm bắt đầu! 🚀", { description: "Đang chuẩn bị đất và kéo mã nguồn..." })
       onUpdate()
       fetchDeployments()
       setIsDeploying(false)
@@ -122,7 +107,7 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="gitRepo">Repository URL</Label>
+              <Label htmlFor="gitRepo">URL Repository</Label>
               <Input
                 id="gitRepo"
                 placeholder="https://github.com/your-org/your-repo"
@@ -132,13 +117,25 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="branch">Branch</Label>
+              <Label htmlFor="branch">Nhánh</Label>
               <Input
                 id="branch"
                 placeholder="main"
                 value={branch}
                 onChange={e => setBranch(e.target.value)}
                 className="bg-muted/50 border-border font-mono text-sm w-40"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gitToken">Git Access Token (Cần cho Private Repo)</Label>
+              <Input
+                id="gitToken"
+                type="password"
+                placeholder="ghp_xxxxxxxxxxxx"
+                value={gitToken}
+                onChange={e => setGitToken(e.target.value)}
+                className="bg-muted/50 border-border font-mono text-sm"
               />
             </div>
 
@@ -165,9 +162,9 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isDeploying ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deploying...</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Đang triển khai...</>
               ) : (
-                <><Upload className="mr-2 h-4 w-4" />Deploy Now</>
+                <><Upload className="mr-2 h-4 w-4" />Triển khai ngay</>
               )}
             </Button>
           </CardContent>
@@ -182,9 +179,9 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-primary" />
                 <div>
-                  <CardTitle className="text-lg">Deployment History</CardTitle>
-                  <CardDescription>Lịch sử 20 lần gieo mầm gần nhất</CardDescription>
-                </div>
+                <CardTitle className="text-lg">Lịch sử triển khai</CardTitle>
+                <CardDescription>20 lần triển khai gần nhất</CardDescription>
+              </div>
               </div>
               <Button variant="ghost" size="icon" onClick={fetchDeployments}>
                 <RefreshCw className="h-4 w-4" />
@@ -221,7 +218,7 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
                               </code>
                             )}
                             <span className="text-xs font-medium text-foreground">
-                              {deployment.gitMessage || "Deploy thủ công"}
+                              {deployment.gitMessage || "Triển khai thủ công"}
                             </span>
                           </div>
                           <p className="text-[10px] text-muted-foreground mt-0.5">

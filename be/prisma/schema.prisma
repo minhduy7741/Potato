@@ -31,6 +31,7 @@ model Project {
   status         String             @default("stopped")
   ramLimit       Int                @default(256)
   cpuLimit       Float              @default(1)
+  hostPort       Int?
   subdomain      String             @unique
   customDomain   String?            @unique
   sslStatus      String             @default("none")
@@ -38,13 +39,19 @@ model Project {
   // Git Deploy
   gitRepo        String?
   deployBranch   String?            @default("main")
+  gitToken       String?
   deployStatus   String?            @default("idle") // idle, deploying, success, failed
   lastDeployedAt DateTime?
-  userId         Int
+  restartPolicy       String             @default("on-failure") // no, on-failure, always
+  autoScale           Boolean            @default(false)
+  notificationsEnabled Boolean           @default(true)
+  userId              Int
   user           User               @relation(fields: [userId], references: [id])
   databases      DatabaseInstance[]
   envVariables   EnvVariable[]
   deployments    DeploymentLog[]
+  activityLogs   ActivityLog[]
+  stats          ProjectStat[]
   createdAt      DateTime           @default(now())
 }
 
@@ -71,6 +78,24 @@ model DeploymentLog {
   createdAt    DateTime @default(now())
 }
 
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String   // START, STOP, RESTART, UPDATE_RESOURCES, CLONE, DEPLOY
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model ProjectStat {
+  id         Int      @id @default(autoincrement())
+  projectId  Int
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cpuUsage   Float    // percentage 0-100
+  ramUsage   Float    // MB
+  createdAt  DateTime @default(now())
+}
+
 model DatabaseInstance {
   id               Int      @id @default(autoincrement())
   name             String
@@ -78,6 +103,18 @@ model DatabaseInstance {
   status           String   @default("provisioning")
   connectionString String?
   projectId        Int
-  project          Project  @relation(fields: [projectId], references: [id])
-  createdAt        DateTime @default(now())
+  project          Project               @relation(fields: [projectId], references: [id])
+  createdAt        DateTime              @default(now())
+  activityLogs     DatabaseActivityLog[]
+}
+
+model DatabaseActivityLog {
+  id         Int              @id @default(autoincrement())
+  databaseId Int
+  database   DatabaseInstance @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  action     String           // IMPORT, EXPORT, CHANGE_PASSWORD
+  filename   String?
+  status     String           // SUCCESS, FAILED
+  message    String?          @db.Text
+  createdAt  DateTime         @default(now())
 }

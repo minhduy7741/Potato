@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Sprout } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 
 interface CreateProjectModalProps {
   isOpen: boolean
@@ -23,26 +24,12 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     setIsLoading(true)
     setError(null)
 
-    const userJson = localStorage.getItem("potato_user")
-    if (!userJson) {
-      setError("Bạn cần đăng nhập để gieo mầm dự án.")
-      setIsLoading(false)
-      return
-    }
-
-    const user = JSON.parse(userJson)
-
     try {
-      const response = await fetch("http://localhost:3000/api/projects", {
+      // userId is now read from the JWT token on the backend — no need to send it
+      await apiFetch("/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, userId: user.id }),
+        body: JSON.stringify({ name }),
       })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || "Không thể tạo dự án")
-      }
 
       setName("")
       onSuccess()

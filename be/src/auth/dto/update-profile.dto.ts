@@ -1,10 +1,9 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
+/**
+ * userId is NOT accepted here — it is read from the JWT token (req.user.id).
+ */
 export class UpdateProfileDto {
-  @IsNumber()
-  @IsNotEmpty()
-  userId: number;
-
   @IsString()
   @IsOptional()
   name?: string;

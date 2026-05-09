@@ -1,10 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -16,6 +49,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DockerService = void 0;
 const common_1 = require("@nestjs/common");
 const dockerode_1 = __importDefault(require("dockerode"));
+const tar = __importStar(require("tar-fs"));
 let DockerService = DockerService_1 = class DockerService {
     logger = new common_1.Logger(DockerService_1.name);
     docker;
@@ -42,6 +76,36 @@ let DockerService = DockerService_1 = class DockerService {
             });
         });
     }
+    async buildImage(contextDir, imageName, onProgress) {
+        this.logger.log(`Building image ${imageName} from ${contextDir}...`);
+        return new Promise((resolve, reject) => {
+            const tarStream = tar.pack(contextDir);
+            this.docker.buildImage(tarStream, { t: imageName }, (err, stream) => {
+                if (err || !stream) {
+                    this.logger.error(`Failed to start build for ${imageName}: ${err?.message || 'No stream'}`);
+                    return reject(err || new Error('No stream returned from buildImage'));
+                }
+                this.docker.modem.followProgress(stream, (followErr, res) => {
+                    if (followErr) {
+                        this.logger.error(`Build progress error for ${imageName}: ${followErr.message}`);
+                        return reject(followErr);
+                    }
+                    this.logger.log(`Successfully built image: ${imageName}`);
+                    resolve();
+                }, (progress) => {
+                    if (progress.stream && onProgress) {
+                        const msg = progress.stream.trim();
+                        if (msg)
+                            onProgress(msg);
+                    }
+                });
+            });
+        });
+    }
+    async inspectImage(imageName) {
+        const image = this.docker.getImage(imageName);
+        return image.inspect();
+    }
     async createContainer(options) {
         this.logger.log(`Creating container: ${options.name || 'unnamed'}`);
         const container = await this.docker.createContainer(options);
@@ -58,8 +122,13 @@ let DockerService = DockerService_1 = class DockerService {
         await container.stop({ t: 10 });
         this.logger.log(`Container stopped: ${containerId.substring(0, 12)}`);
     }
-    async removeContainer(containerId) {
+    async restartContainer(containerId) {
         const container = this.docker.getContainer(containerId);
+        await container.restart();
+        this.logger.log(`Container restarted: ${containerId.substring(0, 12)}`);
+    }
+    async removeContainer(containerId) {
+        const container = this.getContainer(containerId);
         await container.remove({ force: true });
         this.logger.log(`Container removed: ${containerId.substring(0, 12)}`);
     }
@@ -102,7 +171,7 @@ let DockerService = DockerService_1 = class DockerService {
             follow: true,
             stdout: true,
             stderr: true,
-            tail,
+            tail: tail,
             timestamps: true,
         }));
         this.logger.log(`Attached to log stream for container ${containerId.substring(0, 12)}`);
@@ -117,6 +186,30 @@ let DockerService = DockerService_1 = class DockerService {
             timestamps: true,
         });
         return logs.toString();
+    }
+    async getUsedHostPorts() {
+        const containers = await this.docker.listContainers({ all: true });
+        const usedPorts = new Set();
+        for (const container of containers) {
+            for (const portBinding of container.Ports || []) {
+                if (portBinding.PublicPort) {
+                    usedPorts.add(portBinding.PublicPort);
+                }
+            }
+        }
+        this.logger.log(`Found ${usedPorts.size} host ports already in use by Docker`);
+        return usedPorts;
+    }
+    async listContainers(options) {
+        return this.docker.listContainers(options);
+    }
+    async updateContainerResources(containerId, resources) {
+        const container = this.getContainer(containerId);
+        return container.update({
+            NanoCPUs: Math.floor(resources.cpuCores * 1000000000),
+            Memory: resources.ramMB * 1024 * 1024,
+            MemorySwap: resources.ramMB * 1024 * 1024,
+        });
     }
 };
 exports.DockerService = DockerService;

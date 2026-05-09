@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   User, Lock, Shield, Trash2, AlertTriangle, Save, Eye, EyeOff, Bell, Palette, CheckCircle2, Loader2
 } from "lucide-react"
@@ -15,13 +16,14 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { apiFetch } from "@/lib/api"
 
 export default function SettingsPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
-  
+
   // Password change state
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -36,6 +38,7 @@ export default function SettingsPage() {
 
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
 
   useEffect(() => {
     const userJson = localStorage.getItem("potato_user")
@@ -53,52 +56,33 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     setIsSavingProfile(true)
     try {
-      const res = await fetch(`http://localhost:3000/api/auth/me`, {
+      // PATCH /api/auth/me reads userId from JWT token — no need to pass userId
+      const updatedUser = await apiFetch<any>("/auth/me", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, userId: user.id }),
+        body: JSON.stringify({ name }),
       })
-      if (!res.ok) throw new Error("Failed to update profile")
-      const updatedUser = { ...user, name }
-      localStorage.setItem("potato_user", JSON.stringify(updatedUser))
-      setUser(updatedUser)
+      const merged = { ...user, ...updatedUser }
+      localStorage.setItem("potato_user", JSON.stringify(merged))
+      setUser(merged)
       toast.success("Thông tin cá nhân đã được cập nhật!")
-    } catch {
-      toast.error("Không thể cập nhật thông tin, vui lòng thử lại.")
+    } catch (e: any) {
+      toast.error(e.message || "Không thể cập nhật thông tin, vui lòng thử lại.")
     } finally {
       setIsSavingProfile(false)
     }
   }
 
   const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast.error("Mật khẩu mới không khớp!")
-      return
-    }
-    if (newPassword.length < 6) {
-      toast.error("Mật khẩu mới phải dài ít nhất 6 ký tự!")
-      return
-    }
-    if (!currentPassword) {
-      toast.error("Vui lòng nhập mật khẩu hiện tại!")
-      return
-    }
+    if (newPassword !== confirmPassword) { toast.error("Mật khẩu mới không khớp!"); return }
+    if (newPassword.length < 6) { toast.error("Mật khẩu mới phải dài ít nhất 6 ký tự!"); return }
+    if (!currentPassword) { toast.error("Vui lòng nhập mật khẩu hiện tại!"); return }
     setIsSavingPassword(true)
     try {
-      const res = await fetch(`http://localhost:3000/api/auth/change-password`, {
+      // POST /api/auth/change-password reads userId from JWT — no need to pass userId
+      await apiFetch("/auth/change-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, currentPassword, newPassword }),
+        body: JSON.stringify({ currentPassword, newPassword }),
       })
-      
-      const data = await res.json()
-      
-      if (!res.ok) {
-        // NestJS trả về { message: "...", statusCode: ... }
-        const errMsg = Array.isArray(data.message) ? data.message[0] : data.message
-        throw new Error(errMsg || "Đổi mật khẩu thất bại")
-      }
-      
       toast.success("Mật khẩu đã được thay đổi thành công! 🔒")
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("")
     } catch (e: any) {
@@ -108,8 +92,19 @@ export default function SettingsPage() {
     }
   }
 
-  const handleDeleteAccount = () => {
-    toast.error("Tính năng này sẽ xóa vĩnh viễn toàn bộ dữ liệu. Liên hệ admin để xác nhận.")
+  const handleDeleteAccount = async () => {
+    try {
+      toast.loading("Đang xóa tài khoản...", { id: "delete-acc" })
+      await apiFetch("/auth/me", { method: "DELETE" })
+      toast.success("Tài khoản của bạn đã được xóa. Tạm biệt! 👋", { id: "delete-acc" })
+
+      // Cleanup local state
+      localStorage.removeItem("potato_token")
+      localStorage.removeItem("potato_user")
+      router.push("/login")
+    } catch (e: any) {
+      toast.error(e.message || "Xóa tài khoản thất bại, vui lòng liên hệ hỗ trợ.")
+    }
   }
 
   if (!user) return (
@@ -337,11 +332,19 @@ export default function SettingsPage() {
               <Button
                 variant="destructive"
                 className="bg-red-600 hover:bg-red-700"
-                onClick={handleDeleteAccount}
+                onClick={() => setDeleteAccountOpen(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Account
               </Button>
+              <ConfirmDialog
+                open={deleteAccountOpen}
+                title="Xóa tài khoản vĩnh viễn?"
+                description="Hành động này sẽ xóa toàn bộ dự án, database và mọi dữ liệu liên quan. Không thể hoàn tác."
+                confirmLabel="Xóa tài khoản"
+                onConfirm={() => { setDeleteAccountOpen(false); handleDeleteAccount() }}
+                onCancel={() => setDeleteAccountOpen(false)}
+              />
             </div>
           </CardContent>
         </Card>

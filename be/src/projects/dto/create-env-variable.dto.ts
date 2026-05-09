@@ -6,7 +6,6 @@ export class CreateEnvVariableDto {
   key: string;
 
   @IsString()
-  @IsNotEmpty()
   value: string;
 
   @IsBoolean()

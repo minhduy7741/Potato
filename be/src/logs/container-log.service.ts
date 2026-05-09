@@ -33,13 +33,14 @@ export class ContainerLogService implements OnModuleDestroy {
     socketId: string,
     containerId: string,
     client: Socket,
+    tail = 100,
   ): Promise<void> {
     // Stop any existing stream for this socket before starting a new one
     this.stopStreaming(socketId);
 
     try {
       const rawStream =
-        await this.dockerService.getContainerLogStream(containerId);
+        await this.dockerService.getContainerLogStream(containerId, tail);
 
       this.activeStreams.set(socketId, rawStream);
 

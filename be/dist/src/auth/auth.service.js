@@ -44,39 +44,46 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
+const jwt_1 = require("@nestjs/jwt");
 const prisma_service_1 = require("../prisma/prisma.service");
 const bcrypt = __importStar(require("bcrypt"));
 const client_1 = require("@prisma/client");
 let AuthService = class AuthService {
     prisma;
-    constructor(prisma) {
+    jwtService;
+    constructor(prisma, jwtService) {
         this.prisma = prisma;
+        this.jwtService = jwtService;
+    }
+    signToken(user) {
+        return this.jwtService.sign({
+            sub: user.id,
+            email: user.email,
+            name: user.name || '',
+            role: user.role,
+        });
     }
     async register(registerDto) {
         const { email, password, name } = registerDto;
-        const existingUser = await this.prisma.user.findUnique({
-            where: { email },
-        });
+        const existingUser = await this.prisma.user.findUnique({ where: { email } });
         if (existingUser) {
             throw new common_1.ConflictException('Email đã tồn tại trên hệ thống');
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await this.prisma.user.create({
-            data: {
-                email,
-                password: hashedPassword,
-                name,
-                role: client_1.Role.USER,
-            },
+            data: { email, password: hashedPassword, name, role: client_1.Role.USER },
         });
-        const { password: _, ...result } = user;
-        return result;
+        const { password: _, ...userWithoutPassword } = user;
+        const accessToken = this.signToken(user);
+        return {
+            user: userWithoutPassword,
+            accessToken,
+            message: 'Đăng ký thành công',
+        };
     }
     async login(loginDto) {
         const { email, password } = loginDto;
-        const user = await this.prisma.user.findUnique({
-            where: { email },
-        });
+        const user = await this.prisma.user.findUnique({ where: { email } });
         if (!user) {
             throw new common_1.UnauthorizedException('Thông tin đăng nhập không chính xác');
         }
@@ -84,9 +91,11 @@ let AuthService = class AuthService {
         if (!isPasswordValid) {
             throw new common_1.UnauthorizedException('Thông tin đăng nhập không chính xác');
         }
-        const { password: _, ...result } = user;
+        const { password: _, ...userWithoutPassword } = user;
+        const accessToken = this.signToken(user);
         return {
-            user: result,
+            user: userWithoutPassword,
+            accessToken,
             message: 'Đăng nhập thành công',
         };
     }
@@ -116,10 +125,23 @@ let AuthService = class AuthService {
         const { password: _, ...result } = updated;
         return result;
     }
+    async removeAccount(userId, projectsService) {
+        const projects = await this.prisma.project.findMany({
+            where: { userId },
+        });
+        for (const project of projects) {
+            await projectsService.deleteProject(project.id);
+        }
+        await this.prisma.user.delete({
+            where: { id: userId },
+        });
+        return { message: 'Tài khoản và toàn bộ dữ liệu liên quan đã được xóa vĩnh viễn' };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        jwt_1.JwtService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

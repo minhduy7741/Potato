@@ -6,7 +6,7 @@ export declare class ContainerLogService implements OnModuleDestroy {
     private readonly logger;
     private readonly activeStreams;
     constructor(dockerService: DockerService);
-    startStreaming(socketId: string, containerId: string, client: Socket): Promise<void>;
+    startStreaming(socketId: string, containerId: string, client: Socket, tail?: number): Promise<void>;
     stopStreaming(socketId: string): void;
     onModuleDestroy(): void;
     private demuxDockerStream;

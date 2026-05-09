@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/api"
 
 interface ResourceSliderProps {
   label: string
@@ -21,7 +22,7 @@ interface ResourceSliderProps {
 }
 
 function ResourceSlider({ label, icon, value, onChange, min, max, unit, tiers }: ResourceSliderProps) {
-  const currentTier = tiers.reduce((prev, curr) => 
+  const currentTier = tiers.reduce((prev, curr) =>
     value >= curr.value ? curr : prev, tiers[0])
 
   return (
@@ -87,12 +88,10 @@ export function ResourceControl({ project, onUpdate }: ResourceControlProps) {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const res = await fetch(`http://localhost:3000/api/projects/${project.id}/resources`, {
+      await apiFetch(`/projects/${project.id}/resources`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ramLimit, cpuLimit }),
       })
-      if (!res.ok) throw new Error("Lỗi khi cập nhật tài nguyên")
       toast.success("Đã cập nhật giới hạn tài nguyên thành công 🌱", {
         description: `RAM: ${ramLimit}MB · CPU: ${cpuLimit} vCPU`,
       })
@@ -184,8 +183,8 @@ export function ResourceControl({ project, onUpdate }: ResourceControlProps) {
                   variant={cpuLimit === tier.value ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleCpuChange(tier.value)}
-                  className={cpuLimit === tier.value 
-                    ? "bg-primary text-primary-foreground" 
+                  className={cpuLimit === tier.value
+                    ? "bg-primary text-primary-foreground"
                     : "border-border hover:bg-primary/10 hover:text-primary"
                   }
                 >
@@ -195,12 +194,12 @@ export function ResourceControl({ project, onUpdate }: ResourceControlProps) {
             </div>
           </div>
 
-          {/* Cost Estimate */}
           <div className="rounded-lg border border-border bg-muted/50 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Estimated Monthly Cost</p>
+                <p className="text-sm text-muted-foreground">Chi phí ước tính / tháng</p>
                 <p className="text-2xl font-bold text-foreground">${estimatedCost}</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5 italic">* Số liệu tham khảo, không phải hoá đơn thực tế</p>
               </div>
               <div className="text-right text-sm text-muted-foreground">
                 <p>RAM: {ramLimit}MB</p>

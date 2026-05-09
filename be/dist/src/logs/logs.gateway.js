@@ -36,46 +36,46 @@ let LogsGateway = LogsGateway_1 = class LogsGateway {
         this.containerLogService.stopStreaming(client.id);
     }
     async handleJoinProject(data, client) {
-        const { project_id } = data;
-        if (!project_id) {
+        const { projectId } = data;
+        if (!projectId) {
             this.logger.warn(`Client ${client.id} tried to join an undefined project room`);
             return;
         }
-        this.logger.log(`Client ${client.id} joining project room: ${project_id}`);
+        this.logger.log(`Client ${client.id} joining project room: ${projectId}`);
         try {
             const project = await this.prismaService.project.findUnique({
-                where: { id: Number(project_id) },
+                where: { id: Number(projectId) },
             });
             if (!project) {
                 client.emit('log_error', {
-                    message: `Project '${project_id}' not found.`,
+                    message: `Project '${projectId}' not found.`,
                 });
                 return;
             }
             if (!project.containerId) {
                 client.emit('log_error', {
-                    message: `Project '${project_id}' has no container assigned.`,
+                    message: `Project '${projectId}' has no container assigned.`,
                 });
                 return;
             }
-            const roomName = `project:${project_id}`;
+            const roomName = `project:${projectId}`;
             await client.join(roomName);
             this.logger.log(`Client ${client.id} joined room ${roomName}`);
-            await this.containerLogService.startStreaming(client.id, project.containerId, client);
+            await this.containerLogService.startStreaming(client.id, project.containerId, client, 100);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            this.logger.error(`Error joining project ${project_id}: ${message}`);
+            this.logger.error(`Error joining project ${projectId}: ${message}`);
             client.emit('log_error', {
                 message: `Failed to join project: ${message}`,
             });
         }
     }
     async handleLeaveProject(data, client) {
-        const { project_id } = data;
-        this.logger.log(`Client ${client.id} leaving project room: ${project_id}`);
+        const { projectId } = data;
+        this.logger.log(`Client ${client.id} leaving project room: ${projectId}`);
         this.containerLogService.stopStreaming(client.id);
-        const roomName = `project:${project_id}`;
+        const roomName = `project:${projectId}`;
         await client.leave(roomName);
         this.logger.log(`Client ${client.id} left room ${roomName}`);
     }

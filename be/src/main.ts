@@ -4,8 +4,15 @@ import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 
 import { ValidationPipe } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 
 async function bootstrap() {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+  }
+
   const app = await NestFactory.create(AppModule);
 
   // Global validation

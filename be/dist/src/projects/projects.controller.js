@@ -16,23 +16,30 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectsController = void 0;
 const common_1 = require("@nestjs/common");
 const projects_service_1 = require("./projects.service");
+const stats_collector_service_1 = require("./stats-collector.service");
 const create_project_dto_1 = require("./dto/create-project.dto");
 const create_env_variable_dto_1 = require("./dto/create-env-variable.dto");
+const update_env_variable_dto_1 = require("./dto/update-env-variable.dto");
 const update_resources_dto_1 = require("./dto/update-resources.dto");
 const git_deploy_dto_1 = require("./dto/git-deploy.dto");
+const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let ProjectsController = ProjectsController_1 = class ProjectsController {
     projectsService;
+    statsCollectorService;
     logger = new common_1.Logger(ProjectsController_1.name);
-    constructor(projectsService) {
+    constructor(projectsService, statsCollectorService) {
         this.projectsService = projectsService;
+        this.statsCollectorService = statsCollectorService;
     }
-    async create(createProjectDto) {
-        this.logger.log(`POST /projects — Creating "${createProjectDto.name}" for user ${createProjectDto.userId}`);
-        return this.projectsService.createProject(createProjectDto.userId, createProjectDto.name);
+    async create(req, createProjectDto) {
+        const userId = req.user.id;
+        this.logger.log(`POST /projects — Creating "${createProjectDto.name}" for user ${userId}`);
+        return this.projectsService.createProject(userId, createProjectDto.name);
     }
-    async findAll() {
-        this.logger.log('GET /projects — Listing all projects');
-        return this.projectsService.findAll();
+    async findAll(req) {
+        const userId = req.user.id;
+        this.logger.log(`GET /projects — Listing projects for user ${userId}`);
+        return this.projectsService.findAll(userId);
     }
     async findOne(id) {
         this.logger.log(`GET /projects/${id}`);
@@ -42,6 +49,13 @@ let ProjectsController = ProjectsController_1 = class ProjectsController {
         this.logger.log(`GET /projects/${id}/stats`);
         return this.projectsService.getProjectStats(id);
     }
+    async getStatsHistory(id) {
+        return this.statsCollectorService.getStats(id, 24);
+    }
+    async updateRestartPolicy(id, restartPolicy) {
+        this.logger.log(`PATCH /projects/${id}/restart-policy — ${restartPolicy}`);
+        return this.projectsService.updateRestartPolicy(id, restartPolicy);
+    }
     async start(id) {
         this.logger.log(`PATCH /projects/${id}/start`);
         return this.projectsService.startProject(id);
@@ -50,17 +64,29 @@ let ProjectsController = ProjectsController_1 = class ProjectsController {
         this.logger.log(`PATCH /projects/${id}/stop`);
         return this.projectsService.stopProject(id);
     }
+    async restart(id) {
+        this.logger.log(`PATCH /projects/${id}/restart`);
+        return this.projectsService.restartProject(id);
+    }
+    async hibernate(id) {
+        this.logger.log(`PATCH /projects/${id}/hibernate`);
+        return this.projectsService.hibernateProject(id);
+    }
+    async activateSsl(id) {
+        this.logger.log(`PATCH /projects/${id}/ssl/activate`);
+        return this.projectsService.activateSsl(id);
+    }
+    async updateDomain(id, customDomain) {
+        this.logger.log(`PATCH /projects/${id}/domain — ${customDomain}`);
+        return this.projectsService.updateCustomDomain(id, customDomain);
+    }
+    async clone(id) {
+        this.logger.log(`POST /projects/${id}/clone`);
+        return this.projectsService.cloneProject(id);
+    }
     async remove(id) {
         this.logger.log(`DELETE /projects/${id}`);
         return this.projectsService.deleteProject(id);
-    }
-    async updateDomain(id, customDomain) {
-        this.logger.log(`PATCH /projects/${id}/domain — Binding to "${customDomain}"`);
-        return this.projectsService.updateDomain(id, customDomain);
-    }
-    async enableSsl(id) {
-        this.logger.log(`PATCH /projects/${id}/ssl/enable`);
-        return this.projectsService.enableHttps(id);
     }
     async downloadLogs(id) {
         this.logger.log(`GET /projects/${id}/logs/download`);
@@ -77,6 +103,9 @@ let ProjectsController = ProjectsController_1 = class ProjectsController {
     async addEnvVariable(id, dto) {
         return this.projectsService.addEnvVariable(id, dto.key, dto.value, dto.isSecret ?? false);
     }
+    async updateEnvVariable(id, envId, dto) {
+        return this.projectsService.updateEnvVariable(id, envId, dto.value, dto.isSecret);
+    }
     async deleteEnvVariable(id, envId) {
         return this.projectsService.deleteEnvVariable(id, envId);
     }
@@ -84,9 +113,12 @@ let ProjectsController = ProjectsController_1 = class ProjectsController {
         this.logger.log(`PATCH /projects/${id}/resources — RAM=${dto.ramLimit}MB, CPU=${dto.cpuLimit}`);
         return this.projectsService.updateResources(id, dto.ramLimit ?? 256, dto.cpuLimit ?? 1);
     }
+    async getActivityLogs(id) {
+        return this.projectsService.getActivityLogs(id);
+    }
     async deploy(id, dto) {
         this.logger.log(`POST /projects/${id}/deploy — Repo: ${dto.gitRepo}`);
-        return this.projectsService.deployFromGit(id, dto.gitRepo, dto.deployBranch ?? 'main');
+        return this.projectsService.deployFromGit(id, dto.gitRepo, dto.deployBranch ?? 'main', dto.gitToken);
     }
     async getDeployments(id) {
         return this.projectsService.getDeployments(id);
@@ -96,15 +128,17 @@ exports.ProjectsController = ProjectsController;
 __decorate([
     (0, common_1.Post)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_project_dto_1.CreateProjectDto]),
+    __metadata("design:paramtypes", [Object, create_project_dto_1.CreateProjectDto]),
     __metadata("design:returntype", Promise)
 ], ProjectsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ProjectsController.prototype, "findAll", null);
 __decorate([
@@ -122,6 +156,21 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ProjectsController.prototype, "getStats", null);
 __decorate([
+    (0, common_1.Get)(':id/stats/history'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], ProjectsController.prototype, "getStatsHistory", null);
+__decorate([
+    (0, common_1.Patch)(':id/restart-policy'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)('restartPolicy')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, String]),
+    __metadata("design:returntype", Promise)
+], ProjectsController.prototype, "updateRestartPolicy", null);
+__decorate([
     (0, common_1.Patch)(':id/start'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
@@ -136,13 +185,26 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ProjectsController.prototype, "stop", null);
 __decorate([
-    (0, common_1.Delete)(':id'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, common_1.Patch)(':id/restart'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
-], ProjectsController.prototype, "remove", null);
+], ProjectsController.prototype, "restart", null);
+__decorate([
+    (0, common_1.Patch)(':id/hibernate'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], ProjectsController.prototype, "hibernate", null);
+__decorate([
+    (0, common_1.Patch)(':id/ssl/activate'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], ProjectsController.prototype, "activateSsl", null);
 __decorate([
     (0, common_1.Patch)(':id/domain'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
@@ -152,12 +214,20 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ProjectsController.prototype, "updateDomain", null);
 __decorate([
-    (0, common_1.Patch)(':id/ssl/enable'),
+    (0, common_1.Post)(':id/clone'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
-], ProjectsController.prototype, "enableSsl", null);
+], ProjectsController.prototype, "clone", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], ProjectsController.prototype, "remove", null);
 __decorate([
     (0, common_1.Get)(':id/logs/download'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
@@ -181,6 +251,15 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ProjectsController.prototype, "addEnvVariable", null);
 __decorate([
+    (0, common_1.Patch)(':id/env/:envId'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Param)('envId', common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number, update_env_variable_dto_1.UpdateEnvVariableDto]),
+    __metadata("design:returntype", Promise)
+], ProjectsController.prototype, "updateEnvVariable", null);
+__decorate([
     (0, common_1.Delete)(':id/env/:envId'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Param)('envId', common_1.ParseIntPipe)),
@@ -196,6 +275,13 @@ __decorate([
     __metadata("design:paramtypes", [Number, update_resources_dto_1.UpdateResourcesDto]),
     __metadata("design:returntype", Promise)
 ], ProjectsController.prototype, "updateResources", null);
+__decorate([
+    (0, common_1.Get)(':id/activities'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], ProjectsController.prototype, "getActivityLogs", null);
 __decorate([
     (0, common_1.Post)(':id/deploy'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
@@ -213,6 +299,8 @@ __decorate([
 ], ProjectsController.prototype, "getDeployments", null);
 exports.ProjectsController = ProjectsController = ProjectsController_1 = __decorate([
     (0, common_1.Controller)('projects'),
-    __metadata("design:paramtypes", [projects_service_1.ProjectsService])
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __metadata("design:paramtypes", [projects_service_1.ProjectsService,
+        stats_collector_service_1.StatsCollectorService])
 ], ProjectsController);
 //# sourceMappingURL=projects.controller.js.map

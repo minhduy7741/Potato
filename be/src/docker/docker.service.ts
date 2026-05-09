@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import Dockerode from 'dockerode';
 import { Readable } from 'stream';
+import * as tar from 'tar-fs';
+import * as path from 'path';
 
 /**
  * DockerService — Infrastructure layer for all Docker Engine interactions.
@@ -57,6 +59,55 @@ export class DockerService {
     });
   }
 
+  /**
+   * Builds a Docker image from a local directory containing a Dockerfile.
+   * 
+   * @param contextDir - Path to the directory containing the source code and Dockerfile
+   * @param imageName - Tag for the new image (e.g. "potato-app-123")
+   * @param onProgress - Optional callback for build logs
+   */
+  async buildImage(contextDir: string, imageName: string, onProgress?: (msg: string) => void): Promise<void> {
+    this.logger.log(`Building image ${imageName} from ${contextDir}...`);
+
+    return new Promise((resolve, reject) => {
+      // Pack the directory into a tar stream
+      const tarStream = tar.pack(contextDir);
+
+      this.docker.buildImage(tarStream, { t: imageName }, (err: Error | null, stream: NodeJS.ReadableStream | undefined) => {
+        if (err || !stream) {
+          this.logger.error(`Failed to start build for ${imageName}: ${err?.message || 'No stream'}`);
+          return reject(err || new Error('No stream returned from buildImage'));
+        }
+
+        this.docker.modem.followProgress(
+          stream,
+          (followErr: Error | null, res: any[]) => {
+            if (followErr) {
+              this.logger.error(`Build progress error for ${imageName}: ${followErr.message}`);
+              return reject(followErr);
+            }
+            this.logger.log(`Successfully built image: ${imageName}`);
+            resolve();
+          },
+          (progress: any) => {
+            if (progress.stream && onProgress) {
+              const msg = progress.stream.trim();
+              if (msg) onProgress(msg);
+            }
+          }
+        );
+      });
+    });
+  }
+
+  /**
+   * Inspects a Docker image.
+   */
+  async inspectImage(imageName: string): Promise<Dockerode.ImageInspectInfo> {
+    const image = this.docker.getImage(imageName);
+    return image.inspect();
+  }
+
   // ─── Container Lifecycle ─────────────────────────────────────────────
 
   /**
@@ -97,12 +148,23 @@ export class DockerService {
   }
 
   /**
+   * Restarts a container.
+   *
+   * @param containerId - The Docker container ID
+   */
+  async restartContainer(containerId: string): Promise<void> {
+    const container = this.docker.getContainer(containerId);
+    await container.restart();
+    this.logger.log(`Container restarted: ${containerId.substring(0, 12)}`);
+  }
+
+  /**
    * Force-removes a container (even if running).
    *
    * @param containerId - The Docker container ID
    */
   async removeContainer(containerId: string): Promise<void> {
-    const container = this.docker.getContainer(containerId);
+    const container = this.getContainer(containerId);
     await container.remove({ force: true });
     this.logger.log(`Container removed: ${containerId.substring(0, 12)}`);
   }
@@ -200,7 +262,7 @@ export class DockerService {
       follow: true,
       stdout: true,
       stderr: true,
-      tail,
+      tail: tail,
       timestamps: true,
     })) as unknown as Readable;
 
@@ -224,5 +286,46 @@ export class DockerService {
       timestamps: true,
     });
     return logs.toString();
+  }
+
+  /**
+   * Returns a Set of all host ports currently bound by Docker containers.
+   * Inspects both running and stopped containers to avoid allocation conflicts.
+   */
+  async getUsedHostPorts(): Promise<Set<number>> {
+    const containers = await this.docker.listContainers({ all: true });
+    const usedPorts = new Set<number>();
+
+    for (const container of containers) {
+      for (const portBinding of container.Ports || []) {
+        if (portBinding.PublicPort) {
+          usedPorts.add(portBinding.PublicPort);
+        }
+      }
+    }
+
+    this.logger.log(`Found ${usedPorts.size} host ports already in use by Docker`);
+    return usedPorts;
+  }
+
+  /**
+   * Lists containers, optionally filtering by running state or labels.
+   *
+   * @param options - Dockerode list options (all, filters, etc.)
+   */
+  async listContainers(options?: Dockerode.ContainerListOptions): Promise<Dockerode.ContainerInfo[]> {
+    return this.docker.listContainers(options);
+  }
+
+  /**
+   * Dynamically updates a running container's resource limits (CPU/RAM).
+   */
+  async updateContainerResources(containerId: string, resources: { cpuCores: number; ramMB: number }) {
+    const container = this.getContainer(containerId);
+    return container.update({
+      NanoCPUs: Math.floor(resources.cpuCores * 1000000000),
+      Memory: resources.ramMB * 1024 * 1024,
+      MemorySwap: resources.ramMB * 1024 * 1024,
+    });
   }
 }

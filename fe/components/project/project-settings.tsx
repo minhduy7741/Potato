@@ -1,24 +1,22 @@
 "use client"
 
 import { useState } from "react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion } from "framer-motion"
-import { 
-  Settings, 
-  Trash2, 
-  AlertTriangle, 
-  Key, 
-  Globe, 
+import {
+  Settings,
+  Trash2,
+  AlertTriangle,
+  Globe,
   Bell,
-  Plus,
-  Eye,
-  EyeOff,
   Save,
   Lock,
   ShieldCheck,
   Check,
   Loader2,
   Pencil,
-  X
+  X,
+  RefreshCw,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -27,6 +25,8 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/api"
+import { cn } from "@/lib/utils"
 
 interface ProjectSettingsProps {
   project: any
@@ -35,10 +35,16 @@ interface ProjectSettingsProps {
 
 export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
   const [projectName, setProjectName] = useState(project.name)
-  const [autoScale, setAutoScale] = useState(true)
-  const [notifications, setNotifications] = useState(true)
+  const [autoScale, setAutoScale] = useState(project.autoScale || false)
+  const [notifications, setNotifications] = useState(project.notificationsEnabled ?? true)
   const [publicAccess, setPublicAccess] = useState(true)
-  
+  const [restartPolicy, setRestartPolicy] = useState(project.restartPolicy || 'on-failure')
+  const [isSavingPolicy, setIsSavingPolicy] = useState(false)
+  const [isHibernating, setIsHibernating] = useState(false)
+  const [hibernateConfirmOpen, setHibernateConfirmOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   // Custom domain state
   const [customDomain, setCustomDomain] = useState(project.customDomain || "")
   const [isEditingDomain, setIsEditingDomain] = useState(false)
@@ -48,10 +54,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
   const handleEnableSsl = async () => {
     setIsEnablingSsl(true)
     try {
-      const response = await fetch(`http://localhost:3000/api/projects/${project.id}/ssl/enable`, {
-        method: "PATCH",
-      })
-      if (!response.ok) throw new Error("Thất bại khi kích hoạt SSL")
+      await apiFetch(`/projects/${project.id}/ssl/activate`, { method: "PATCH" })
       toast.success("Dự án của bạn đã được mã hóa thành công (HTTPS)! 🔒")
       onUpdate?.()
     } catch (error: any) {
@@ -64,15 +67,10 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
   const handleSaveDomain = async () => {
     setIsSavingDomain(true)
     try {
-      const response = await fetch(`http://localhost:3000/api/projects/${project.id}/domain`, {
+      await apiFetch(`/projects/${project.id}/domain`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ customDomain }),
       })
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.message || "Lỗi khi cập nhật domain")
-      }
       toast.success(`Domain "${customDomain}" đã được gắn thành công! 🌐`)
       setIsEditingDomain(false)
       onUpdate?.()
@@ -88,21 +86,85 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
   const handleSaveGeneral = async () => {
     setIsSavingGeneral(true)
     try {
-      // For now, we only have projectName as a real field in DB
-      const response = await fetch(`http://localhost:3000/api/projects/${project.id}`, {
+      await apiFetch(`/projects/${project.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: projectName }),
       })
-      if (!response.ok) throw new Error("Thất bại khi cập nhật thông tin")
       toast.success("Đã cập nhật thông tin Plot thành công!")
       onUpdate?.()
     } catch (error: any) {
-      // The mock might not support PATCH /projects/:id for basic info yet, 
-      // but the controller has Get/Patch/Delete. Let's assume it works.
-      toast.success("Đã lưu cài đặt chung (Simulation)")
+      toast.error(error.message || "Đã lưu cài đặt")
     } finally {
       setIsSavingGeneral(false)
+    }
+  }
+
+  const handleSavePolicy = async () => {
+    setIsSavingPolicy(true)
+    try {
+      await apiFetch(`/projects/${project.id}/restart-policy`, {
+        method: "PATCH",
+        body: JSON.stringify({ restartPolicy }),
+      })
+      toast.success(`Chính sách khởi động đã được đặt thành "${restartPolicy}" 🔄`)
+      onUpdate?.()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsSavingPolicy(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    try {
+      await apiFetch(`/projects/${project.id}`, { method: "DELETE" })
+      toast.success(`Đã xóa dự án "${project.name}" thành công`)
+      window.location.href = "/dashboard"
+    } catch (error: any) {
+      toast.error(error.message)
+      setIsDeleting(false)
+    }
+  }
+
+  const handleHibernate = async () => {
+    setIsHibernating(true)
+    try {
+      await apiFetch(`/projects/${project.id}/hibernate`, { method: "PATCH" })
+      toast.success("Dự án đã được đưa vào trạng thái ngủ đông 😴")
+      onUpdate?.()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsHibernating(false)
+    }
+  }
+
+  const toggleAutoScale = async (val: boolean) => {
+    setAutoScale(val)
+    try {
+      await apiFetch(`/projects/${project.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ autoScale: val }),
+      })
+      toast.success(`Đã ${val ? "bật" : "tắt"} tính năng Tự động mở rộng 🚀`)
+    } catch (error: any) {
+      toast.error(error.message)
+      setAutoScale(!val)
+    }
+  }
+
+  const toggleNotifications = async (val: boolean) => {
+    setNotifications(val)
+    try {
+      await apiFetch(`/projects/${project.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ notificationsEnabled: val }),
+      })
+      toast.success(`Thông báo đã được ${val ? "bật" : "tắt"} 🔔`)
+    } catch (error: any) {
+      toast.error(error.message)
+      setNotifications(!val)
     }
   }
 
@@ -160,22 +222,22 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
                 <Settings className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium text-foreground">Auto-Scale</p>
-                  <p className="text-xs text-muted-foreground">Automatically adjust resources based on demand</p>
+                  <p className="text-xs text-muted-foreground">Tự động tăng RAM/CPU khi ứng dụng bị quá tải</p>
                 </div>
               </div>
-              <Switch checked={autoScale} onCheckedChange={setAutoScale} />
+              <Switch checked={autoScale} onCheckedChange={toggleAutoScale} />
             </div>
             <div className="flex items-center justify-between py-3 border-t border-border">
               <div className="flex items-center gap-3">
                 <Bell className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium text-foreground">Notifications</p>
-                  <p className="text-xs text-muted-foreground">Receive alerts for deployments and errors</p>
+                  <p className="text-xs text-muted-foreground">Nhận cảnh báo khi Deploy lỗi hoặc dự án gặp sự cố</p>
                 </div>
               </div>
-              <Switch checked={notifications} onCheckedChange={setNotifications} />
+              <Switch checked={notifications} onCheckedChange={toggleNotifications} />
             </div>
-            <Button 
+            <Button
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={handleSaveGeneral}
               disabled={isSavingGeneral}
@@ -256,8 +318,8 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
                         {isExpiring ? 'Certificate Expiring Soon' : 'SSL Protection Active'}
                       </p>
                       <p className="text-xs text-muted-foreground whitespace-pre-line">
-                        {isExpiring 
-                          ? `Chứng chỉ của bạn sẽ hết hạn vào ${new Date(project.sslExpiry).toLocaleDateString()}. Vui lòng gia hạn.` 
+                        {isExpiring
+                          ? `Chứng chỉ của bạn sẽ hết hạn vào ${new Date(project.sslExpiry).toLocaleDateString()}. Vui lòng gia hạn.`
                           : `Sử dụng HTTPS (TLS 1.3) và Force Redirect từ HTTP.`}
                       </p>
                     </div>
@@ -271,9 +333,9 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
                 </div>
               )}
             </div>
-            
+
             {!isSslActive && (
-              <Button 
+              <Button
                 className="w-full bg-emerald-600 text-white hover:bg-emerald-700 font-bold"
                 onClick={handleEnableSsl}
                 disabled={project.sslStatus === 'provisioning' || isEnablingSsl}
@@ -289,6 +351,65 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
         </Card>
       </motion.div>
 
+
+      {/* Restart Policy */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.15 }}
+      >
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle className="text-lg">Restart Policy</CardTitle>
+                <CardDescription>Chính sách tự khởi động khi container bị lỗi</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { value: 'no', label: 'Không bao giờ', desc: 'Container sẽ không tự khởi động lại', icon: '🚫' },
+                { value: 'on-failure', label: 'Khi gặp lỗi', desc: 'Tự khởi động khi exit code ≠ 0', icon: '🔁' },
+                { value: 'always', label: 'Luôn luôn', desc: 'Luôn tự khởi động, kể cả bị stop thủ công', icon: '♾️' },
+                { value: 'unless-stopped', label: 'Trừ khi dừng', desc: 'Khởi động lại trừ khi bị dừng thủ công', icon: '⏸️' },
+              ].map((policy) => (
+                <button
+                  key={policy.value}
+                  onClick={() => setRestartPolicy(policy.value)}
+                  className={cn(
+                    "flex items-start gap-3 rounded-xl border p-4 text-left transition-all",
+                    restartPolicy === policy.value
+                      ? "border-primary bg-primary/10 shadow-sm"
+                      : "border-border bg-muted/30 hover:bg-muted/60"
+                  )}
+                >
+                  <span className="text-2xl leading-none mt-0.5">{policy.icon}</span>
+                  <div>
+                    <p className={cn("text-sm font-semibold", restartPolicy === policy.value ? "text-primary" : "text-foreground")}>
+                      {policy.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{policy.desc}</p>
+                  </div>
+                  {restartPolicy === policy.value && (
+                    <Check className="ml-auto h-4 w-4 text-primary shrink-0 mt-1" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <Button
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={handleSavePolicy}
+              disabled={isSavingPolicy}
+            >
+              {isSavingPolicy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Lưu chính sách
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Danger Zone */}
       <motion.div
@@ -310,21 +431,48 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
             <div className="flex items-center justify-between rounded-lg border border-red-500/30 bg-red-500/5 p-4">
               <div>
                 <p className="font-medium text-foreground">Hibernate Plot</p>
-                <p className="text-sm text-muted-foreground">Temporarily suspend this deployment</p>
+                <p className="text-sm text-muted-foreground">Tạm dừng dự án để tiết kiệm tài nguyên</p>
               </div>
-              <Button variant="outline" className="border-red-500/30 text-red-400 hover:bg-red-500/10">
-                Hibernate
+              <Button
+                variant="outline"
+                className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                onClick={() => setHibernateConfirmOpen(true)}
+                disabled={isHibernating || project.status === 'hibernated'}
+              >
+                {isHibernating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Hibernate"}
               </Button>
+              <ConfirmDialog
+                open={hibernateConfirmOpen}
+                title="Cho dự án đi ngủ đông?"
+                description="Dự án sẽ ngừng tiêu tốn tài nguyên. Bạn có thể bật lại bất cứ lúc nào."
+                confirmLabel="Hibernate"
+                variant="warning"
+                onConfirm={() => { setHibernateConfirmOpen(false); handleHibernate() }}
+                onCancel={() => setHibernateConfirmOpen(false)}
+              />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-red-500/30 bg-red-500/5 p-4">
               <div>
                 <p className="font-medium text-foreground">Delete Plot</p>
                 <p className="text-sm text-muted-foreground">Permanently remove this project and all data</p>
               </div>
-              <Button variant="destructive" className="bg-red-500 hover:bg-red-600">
-                <Trash2 className="mr-2 h-4 w-4" />
+              <Button
+                variant="destructive"
+                className="bg-red-500 hover:bg-red-600"
+                onClick={() => setDeleteConfirmOpen(true)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                 Delete
               </Button>
+              <ConfirmDialog
+                open={deleteConfirmOpen}
+                title={`Xóa dự án "${project.name}"?`}
+                description="Hành động này sẽ xóa vĩnh viễn container, logs và toàn bộ dữ liệu liên quan. Không thể hoàn tác."
+                confirmLabel="Xóa dự án"
+                onConfirm={() => { setDeleteConfirmOpen(false); handleDelete() }}
+                onCancel={() => setDeleteConfirmOpen(false)}
+              />
             </div>
           </CardContent>
         </Card>

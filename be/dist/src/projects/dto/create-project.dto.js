@@ -11,10 +11,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateProjectDto = void 0;
 const class_validator_1 = require("class-validator");
-const class_transformer_1 = require("class-transformer");
 class CreateProjectDto {
     name;
-    userId;
 }
 exports.CreateProjectDto = CreateProjectDto;
 __decorate([
@@ -23,10 +21,4 @@ __decorate([
     (0, class_validator_1.MinLength)(3),
     __metadata("design:type", String)
 ], CreateProjectDto.prototype, "name", void 0);
-__decorate([
-    (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    (0, class_transformer_1.Type)(() => Number),
-    __metadata("design:type", Number)
-], CreateProjectDto.prototype, "userId", void 0);
 //# sourceMappingURL=create-project.dto.js.map

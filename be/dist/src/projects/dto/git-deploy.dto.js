@@ -14,6 +14,7 @@ const class_validator_1 = require("class-validator");
 class GitDeployDto {
     gitRepo;
     deployBranch;
+    gitToken;
 }
 exports.GitDeployDto = GitDeployDto;
 __decorate([
@@ -26,4 +27,9 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], GitDeployDto.prototype, "deployBranch", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], GitDeployDto.prototype, "gitToken", void 0);
 //# sourceMappingURL=git-deploy.dto.js.map

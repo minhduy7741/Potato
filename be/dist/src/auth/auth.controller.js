@@ -19,10 +19,14 @@ const register_dto_1 = require("./dto/register.dto");
 const login_dto_1 = require("./dto/login.dto");
 const change_password_dto_1 = require("./dto/change-password.dto");
 const update_profile_dto_1 = require("./dto/update-profile.dto");
+const jwt_auth_guard_1 = require("./jwt-auth.guard");
+const projects_service_1 = require("../projects/projects.service");
 let AuthController = class AuthController {
     authService;
-    constructor(authService) {
+    projectsService;
+    constructor(authService, projectsService) {
         this.authService = authService;
+        this.projectsService = projectsService;
     }
     async register(registerDto) {
         return this.authService.register(registerDto);
@@ -30,11 +34,17 @@ let AuthController = class AuthController {
     async login(loginDto) {
         return this.authService.login(loginDto);
     }
-    async changePassword(dto) {
-        return this.authService.changePassword(dto.userId, dto.currentPassword, dto.newPassword);
+    async getMe(req) {
+        return req.user;
     }
-    async updateProfile(dto) {
-        return this.authService.updateProfile(dto.userId, dto.name);
+    async changePassword(req, dto) {
+        return this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
+    }
+    async updateProfile(req, dto) {
+        return this.authService.updateProfile(req.user.id, dto.name);
+    }
+    async deleteAccount(req) {
+        return this.authService.removeAccount(req.user.id, this.projectsService);
     }
 };
 exports.AuthController = AuthController;
@@ -54,22 +64,43 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
+    (0, common_1.Get)('me'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "getMe", null);
+__decorate([
     (0, common_1.Post)('change-password'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [change_password_dto_1.ChangePasswordDto]),
+    __metadata("design:paramtypes", [Object, change_password_dto_1.ChangePasswordDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "changePassword", null);
 __decorate([
     (0, common_1.Patch)('me'),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [update_profile_dto_1.UpdateProfileDto]),
+    __metadata("design:paramtypes", [Object, update_profile_dto_1.UpdateProfileDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "updateProfile", null);
+__decorate([
+    (0, common_1.Delete)('me'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "deleteAccount", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
-    __metadata("design:paramtypes", [auth_service_1.AuthService])
+    __metadata("design:paramtypes", [auth_service_1.AuthService,
+        projects_service_1.ProjectsService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

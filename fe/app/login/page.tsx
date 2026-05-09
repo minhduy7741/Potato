@@ -8,13 +8,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Sparkles, ArrowRight, Loader2, Mail, Lock, User as UserIcon } from "lucide-react"
+import { Sparkles, ArrowRight, Loader2, Mail, Lock, User as UserIcon, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { apiFetch } from "@/lib/api"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("login")
+  const [registerSuccess, setRegisterSuccess] = useState(false)
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -27,22 +30,16 @@ export default function LoginPage() {
     const password = formData.get("password") as string
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/login", {
+      const data = await apiFetch<{ user: any; accessToken: string }>("/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        skipAuth: true,
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Đăng nhập thất bại")
-      }
-
-      // Lưu info giả định (token/user)
+      // Store both user info and JWT token
       localStorage.setItem("potato_user", JSON.stringify(data.user))
-      
-      // Chuyển hướng tới dashboard
+      localStorage.setItem("potato_token", data.accessToken)
+
       router.push("/dashboard")
     } catch (err: any) {
       setError(err.message)
@@ -62,25 +59,19 @@ export default function LoginPage() {
     const name = formData.get("name") as string
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/register", {
+      const data = await apiFetch<{ user: any; accessToken: string }>("/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, name }),
+        skipAuth: true,
       })
 
-      const data = await response.json()
+      // Auto-login: store token and redirect directly to dashboard
+      localStorage.setItem("potato_user", JSON.stringify(data.user))
+      localStorage.setItem("potato_token", data.accessToken)
 
-      if (!response.ok) {
-        // Handle validation errors from backend
-        if (Array.isArray(data.message)) {
-          throw new Error(data.message[0])
-        }
-        throw new Error(data.message || "Đăng ký thất bại")
-      }
-
-      // Đăng ký xong thì chuyển sang tab login hoặc tự động login
-      alert("Đăng ký thành công! Bạn có thể đăng nhập ngay.")
-      window.location.reload()
+      setRegisterSuccess(true)
+      // Short delay to show success state then redirect
+      setTimeout(() => router.push("/dashboard"), 1200)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -121,7 +112,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <Tabs defaultValue="login" className="w-full">
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setError(null) }} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 p-1 rounded-xl">
             <TabsTrigger value="login" className="rounded-lg py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">Sign In</TabsTrigger>
             <TabsTrigger value="register" className="rounded-lg py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">Sign Up</TabsTrigger>
@@ -157,7 +148,6 @@ export default function LoginPage() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <Label htmlFor="password">Mật khẩu</Label>
-                          <Link href="#" className="text-xs text-primary hover:underline">Quên mật khẩu?</Link>
                         </div>
                         <div className="relative">
                           <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -197,51 +187,66 @@ export default function LoginPage() {
                     <CardTitle className="text-xl">Join the Garden</CardTitle>
                     <CardDescription>Bắt đầu hành trình DevOps dễ dàng như ăn khoai tây chiên.</CardDescription>
                   </CardHeader>
-                  <form onSubmit={handleRegister}>
-                    <CardContent className="space-y-4">
-                      {error && (
-                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                          {error}
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <Label htmlFor="reg-name">Họ và tên</Label>
-                        <div className="relative">
-                          <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input id="reg-name" name="name" type="text" placeholder="Dev Potato" className="pl-10 bg-background/50" required />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="reg-email">Email</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input id="reg-email" name="email" type="text" placeholder="potato@example.com" className="pl-10 bg-background/50" required />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="reg-password">Mật khẩu</Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input id="reg-password" name="password" type="password" placeholder="Tối thiểu 6 ký tự" className="pl-10 bg-background/50" required minLength={6} />
-                        </div>
-                      </div>
+                  {registerSuccess ? (
+                    <CardContent className="py-10 flex flex-col items-center gap-4">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200 }}
+                      >
+                        <CheckCircle2 className="h-16 w-16 text-emerald-400" />
+                      </motion.div>
+                      <p className="text-lg font-semibold text-foreground">Đăng ký thành công! 🥔</p>
+                      <p className="text-sm text-muted-foreground">Đang chuyển hướng đến dashboard...</p>
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
                     </CardContent>
-                    <CardFooter>
-                      <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-6 text-lg rounded-xl shadow-lg shadow-primary/20" disabled={isLoading}>
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Gieo mầm...
-                          </>
-                        ) : (
-                          <>
-                            Sign Up
-                            <ArrowRight className="ml-2 h-5 w-5" />
-                          </>
+                  ) : (
+                    <form onSubmit={handleRegister}>
+                      <CardContent className="space-y-4">
+                        {error && (
+                          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                            {error}
+                          </div>
                         )}
-                      </Button>
-                    </CardFooter>
-                  </form>
+                        <div className="space-y-2">
+                          <Label htmlFor="reg-name">Họ và tên</Label>
+                          <div className="relative">
+                            <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input id="reg-name" name="name" type="text" placeholder="Dev Potato" className="pl-10 bg-background/50" required />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="reg-email">Email</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input id="reg-email" name="email" type="text" placeholder="potato@example.com" className="pl-10 bg-background/50" required />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="reg-password">Mật khẩu</Label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input id="reg-password" name="password" type="password" placeholder="Tối thiểu 6 ký tự" className="pl-10 bg-background/50" required minLength={6} />
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-6 text-lg rounded-xl shadow-lg shadow-primary/20" disabled={isLoading}>
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                              Gieo mầm...
+                            </>
+                          ) : (
+                            <>
+                              Sign Up
+                              <ArrowRight className="ml-2 h-5 w-5" />
+                            </>
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </form>
+                  )}
                 </Card>
               </motion.div>
             </TabsContent>

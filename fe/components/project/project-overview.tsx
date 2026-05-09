@@ -1,21 +1,26 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { 
-  Globe, 
-  GitBranch, 
-  Clock, 
-  Shield, 
-  Database, 
+import {
+  Globe,
+  GitBranch,
+  Clock,
+  Shield,
+  Database,
   Activity,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  GitCommit,
+  CheckCircle2,
+  XCircle,
+  Loader2,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { apiFetch } from "@/lib/api"
 
 interface InfoRowProps {
   icon: React.ReactNode
@@ -44,9 +49,9 @@ function InfoRow({ icon, label, value, copyable, link }: InfoRowProps) {
       </div>
       <div className="flex items-center gap-2">
         {link ? (
-          <a 
-            href={`https://${value}`} 
-            target="_blank" 
+          <a
+            href={value.startsWith('http') ? value : `http://${value}`}
+            target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-sm text-primary hover:underline"
           >
@@ -76,6 +81,25 @@ interface ProjectOverviewProps {
 }
 
 export function ProjectOverview({ project }: ProjectOverviewProps) {
+  const [deployments, setDeployments] = useState<any[]>([])
+  const [loadingDeployments, setLoadingDeployments] = useState(true)
+  const [activities, setActivities] = useState<any[]>([])
+  const [loadingActivities, setLoadingActivities] = useState(true)
+
+  useEffect(() => {
+    // Fetch deployments
+    apiFetch(`/projects/${project.id}/deployments`)
+      .then((data) => setDeployments(data || []))
+      .catch(() => setDeployments([]))
+      .finally(() => setLoadingDeployments(false))
+
+    // Fetch activities
+    apiFetch(`/projects/${project.id}/activities`)
+      .then((data) => setActivities(data || []))
+      .catch(() => setActivities([]))
+      .finally(() => setLoadingActivities(false))
+  }, [project.id, project.ramLimit, project.cpuLimit, project.status])
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Project Info */}
@@ -92,7 +116,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             <InfoRow
               icon={<Globe className="h-4 w-4" />}
               label="Local URL"
-              value={`${project.subdomain}.potato.local`}
+              value={project.hostPort ? `localhost:${project.hostPort}` : `${project.subdomain}.potato.local`}
               link
               copyable
             />
@@ -176,7 +200,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Health Status</CardTitle>
               <Badge className={project.status === "running" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-muted text-muted-foreground border-border"}>
-                {project.status === "running" ? "Healthy" : "Hibernating"}
+                {project.status === "running" ? "Healthy" : project.status === "sprouting" ? "Provisioning" : "Hibernating"}
               </Badge>
             </div>
           </CardHeader>
@@ -205,7 +229,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
         </Card>
       </motion.div>
 
-      {/* Recent Activity */}
+      {/* Recent Activity — from real DeploymentLog */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -220,28 +244,144 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-3">
-              {[
-                { event: "Project Planted", detail: `User created initial plot`, time: new Date(project.createdAt).toLocaleDateString(), status: "success" },
-                { event: "Docker Attached", detail: `Container ${project.containerId?.substring(0, 12)} mapping`, time: "Just now", status: "success" },
-              ].map((activity, index) => (
-                <div key={index} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
+            {loadingDeployments ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : deployments.length === 0 ? (
+              <div className="py-8 text-center border-2 border-dashed border-border rounded-xl">
+                {/* Always show project creation as baseline activity */}
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3 mx-0">
                   <div className="flex items-center gap-3">
                     <div className="h-2 w-2 rounded-full bg-emerald-400" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">{activity.event}</p>
+                      <p className="text-sm font-medium text-foreground">Project Planted</p>
                       <p className="text-xs text-muted-foreground">
-                        {activity.detail}
-                        {" · "}{activity.time}
+                        Initial plot created · {new Date(project.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="ghost" size="sm" className="text-muted-foreground">
-                    Done
-                  </Badge>
+                  <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-500/30">Done</Badge>
                 </div>
-              ))}
+                <p className="text-xs text-muted-foreground mt-4 italic">Chưa có lần deploy nào. Git Deploy để bắt đầu!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Project creation baseline */}
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 w-2 rounded-full bg-emerald-400" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Project Planted</p>
+                      <p className="text-xs text-muted-foreground">
+                        Initial plot created · {new Date(project.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-500/30">Done</Badge>
+                </div>
+                {deployments.slice(0, 5).map((dep: any) => (
+                  <div key={dep.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
+                    <div className="flex items-center gap-3">
+                      {dep.status === 'success' ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                      ) : dep.status === 'failed' ? (
+                        <XCircle className="h-4 w-4 text-red-400 shrink-0" />
+                      ) : (
+                        <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                          Git Deploy
+                          {dep.gitCommit && (
+                            <span className="font-mono text-xs text-muted-foreground flex items-center gap-1">
+                              <GitCommit className="h-3 w-3" />
+                              {dep.gitCommit}
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {dep.gitMessage && `${dep.gitMessage} · `}
+                          {new Date(dep.createdAt).toLocaleString()}
+                          {dep.duration != null && ` · ${dep.duration}s`}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${
+                        dep.status === 'success'
+                          ? 'text-emerald-400 border-emerald-500/30'
+                          : dep.status === 'failed'
+                          ? 'text-red-400 border-red-500/30'
+                          : 'text-primary border-primary/30'
+                      }`}
+                    >
+                      {dep.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Recent Activity */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.4 }}
+        className="lg:col-span-2"
+      >
+        <Card className="border-border bg-card overflow-hidden">
+          <CardHeader className="border-b border-border/50 bg-muted/20">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Recent Activity</CardTitle>
             </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loadingActivities ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : activities.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                <Activity className="h-10 w-10 mb-2 opacity-20" />
+                <p className="text-sm">No activity recorded yet.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/50">
+                {activities.map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors">
+                    <div className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+                      activity.type === 'START' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' :
+                      activity.type === 'STOP' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' :
+                      activity.type === 'DEPLOY' ? 'border-primary/30 bg-primary/10 text-primary' :
+                      'border-border bg-muted text-muted-foreground'
+                    }`}>
+                      {activity.type === 'START' && <CheckCircle2 className="h-4 w-4" />}
+                      {activity.type === 'STOP' && <XCircle className="h-4 w-4" />}
+                      {activity.type === 'DEPLOY' && <GitBranch className="h-4 w-4" />}
+                      {activity.type === 'UPDATE_RESOURCES' && <Activity className="h-4 w-4" />}
+                      {!['START', 'STOP', 'DEPLOY', 'UPDATE_RESOURCES'].includes(activity.type) && <Clock className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium leading-none text-foreground">
+                        {activity.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(activity.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider py-0 px-1.5 h-5">
+                      {activity.type}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

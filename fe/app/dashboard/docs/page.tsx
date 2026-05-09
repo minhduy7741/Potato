@@ -1,12 +1,12 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { useState, useCallback } from "react"
 import {
-  BookOpen, Search, Globe, Lock, Terminal, Database, GitBranch,
-  Zap, ChevronRight, ExternalLink, Cpu, Shield
+  BookOpen, Search, Globe, Lock, Terminal, Database,
+  Zap, ChevronRight, Cpu, Shield, Info, X
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 
@@ -87,6 +87,12 @@ const badgeColors: Record<string, string> = {
 
 export default function DocsPage() {
   const [search, setSearch] = useState("")
+  const [toast, setToast] = useState<{ title: string } | null>(null)
+
+  const showToast = useCallback((title: string) => {
+    setToast({ title })
+    setTimeout(() => setToast(null), 3500)
+  }, [])
 
   const filtered = docSections.map((section) => ({
     ...section,
@@ -157,7 +163,7 @@ export default function DocsPage() {
                 {section.articles.map((article) => (
                   <button
                     key={article.title}
-                    onClick={() => alert(`📖 Tài liệu chi tiết cho "${article.title}" đang được biên soạn. Quay lại sau nhé!`)}
+                    onClick={() => showToast(article.title)}
                     className="w-full text-left rounded-lg p-3 hover:bg-white/5 transition-colors group"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -197,6 +203,36 @@ export default function DocsPage() {
           Potato IDP Documentation — Nếu bạn cần hỗ trợ, hãy liên hệ team Potato! 🥔
         </div>
       </motion.div>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: 24, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="fixed bottom-6 right-6 z-50 flex items-start gap-3 rounded-xl border border-primary/30 bg-card/95 backdrop-blur-sm shadow-xl px-4 py-3.5 max-w-sm"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+              <Info className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">📖 Tài liệu đang biên soạn</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Bài viết <span className="font-medium text-foreground">&ldquo;{toast.title}&rdquo;</span> sẽ sớm có mặt. Hãy quay lại sau nhé!
+              </p>
+            </div>
+            <button
+              onClick={() => setToast(null)}
+              className="shrink-0 rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

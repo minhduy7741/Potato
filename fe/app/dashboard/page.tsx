@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { Plus, Sparkles, Loader2, RefreshCw, ShieldAlert, X } from "lucide-react"
+import { Plus, Sparkles, Loader2, RefreshCw, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { StatsCards } from "@/components/dashboard/stats-cards"
 import { ProjectCard } from "@/components/dashboard/project-card"
@@ -10,6 +10,7 @@ import { QuickActions } from "@/components/dashboard/quick-actions"
 import { CreateProjectModal } from "@/components/dashboard/create-project-modal"
 import { CreateDatabaseModal } from "@/components/dashboard/create-database-modal"
 import { useRouter } from "next/navigation"
+import { apiFetch } from "@/lib/api"
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<any[]>([])
@@ -19,31 +20,55 @@ export default function DashboardPage() {
   const [isDbModalOpen, setIsDbModalOpen] = useState(false)
   const router = useRouter()
 
-  const fetchProjects = async () => {
-    setIsLoading(true)
+  // Track polling interval so we can clear it
+  const pollingRef = useRef<NodeJS.Timeout | null>(null)
+
+  const fetchProjects = async (silent = false) => {
+    if (!silent) setIsLoading(true)
     try {
-      const response = await fetch("http://localhost:3000/api/projects")
-      if (!response.ok) throw new Error("Không thể tải danh sách dự án")
-      const data = await response.json()
+      const data = await apiFetch<any[]>("/projects")
       setProjects(data)
     } catch (error) {
       console.error("Fetch Error:", error)
+      // If 401, token expired — redirect to login
+      if ((error as any).message?.toLowerCase().includes('unauthorized') ||
+          (error as any).message?.toLowerCase().includes('401')) {
+        router.push("/login")
+      }
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
     }
   }
 
   useEffect(() => {
     const userJson = localStorage.getItem("potato_user")
-    if (!userJson) {
+    const token = localStorage.getItem("potato_token")
+    if (!userJson || !token) {
       router.push("/login")
       return
     }
     const user = JSON.parse(userJson)
     setUserName(user.name || user.email)
-    
     fetchProjects()
   }, [router])
+
+  // Poll every 4 seconds if any project is still "sprouting" (provisioning)
+  useEffect(() => {
+    const hasSprouting = projects.some(p => p.status === 'sprouting')
+
+    if (hasSprouting) {
+      pollingRef.current = setInterval(() => fetchProjects(true), 4000)
+    } else {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
+  }, [projects])
 
   const expiringProjects = projects.filter(p => p.sslStatus === 'expiring_soon')
 
@@ -62,7 +87,9 @@ export default function DashboardPage() {
                 {expiringProjects.map(p => p.name).join(", ")} — Hệ thống sẽ tự động gia hạn trong vòng 7 ngày.
               </p>
             </div>
-            <Button variant="ghost" size="sm" className="text-amber-400 hover:bg-amber-500/20 shrink-0 text-xs">
+            <Button variant="ghost" size="sm" className="text-amber-400 hover:bg-amber-500/20 shrink-0 text-xs"
+              onClick={() => router.push(`/dashboard/project/${expiringProjects[0].id}`)}
+            >
               Xem chi tiết
             </Button>
           </div>
@@ -85,10 +112,10 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={fetchProjects} disabled={isLoading}>
+          <Button variant="outline" size="icon" onClick={() => fetchProjects()} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           </Button>
-          <Button 
+          <Button
             className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
             onClick={() => setIsModalOpen(true)}
           >
@@ -112,9 +139,17 @@ export default function DashboardPage() {
             <Sparkles className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold text-foreground">My Plots</h2>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {projects.length} project(s) sprouting
-          </p>
+          <div className="flex items-center gap-2">
+            {projects.some(p => p.status === 'sprouting') && (
+              <span className="flex items-center gap-1.5 text-xs text-primary animate-pulse">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Provisioning...
+              </span>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {projects.length} project(s) sprouting
+            </p>
+          </div>
         </div>
 
         {isLoading ? (
@@ -128,13 +163,13 @@ export default function DashboardPage() {
             <Button variant="secondary" onClick={() => setIsModalOpen(true)}>Plant First App</Button>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-6">
             {projects.map((project, index) => (
-              <ProjectCard 
-                key={project.id} 
-                {...project} 
-                index={index} 
-                onUpdate={fetchProjects}
+              <ProjectCard
+                key={project.id}
+                {...project}
+                index={index}
+                onUpdate={() => fetchProjects()}
               />
             ))}
           </div>
@@ -142,22 +177,22 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Quick Actions */}
-      <QuickActions 
-        onNewProject={() => setIsModalOpen(true)} 
+      <QuickActions
+        onNewProject={() => setIsModalOpen(true)}
         onNewDatabase={() => setIsDbModalOpen(true)}
       />
 
       {/* Modals */}
-      <CreateProjectModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSuccess={fetchProjects}
+      <CreateProjectModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => fetchProjects()}
       />
 
       <CreateDatabaseModal
         isOpen={isDbModalOpen}
         onClose={() => setIsDbModalOpen(false)}
-        onSuccess={fetchProjects} // Refresh projects to see attached DBs
+        onSuccess={() => fetchProjects()}
       />
     </div>
   )

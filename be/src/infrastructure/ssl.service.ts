@@ -2,15 +2,23 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { NginxService } from './nginx.service';
+import * as fs from 'fs';
+import * as path from 'path';
+import { execSync } from 'child_process';
 
 @Injectable()
 export class SslService {
   private readonly logger = new Logger(SslService.name);
+  private readonly sslDir = path.resolve(process.cwd(), 'ssl_certs');
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly nginxService: NginxService,
-  ) {}
+  ) {
+    if (!fs.existsSync(this.sslDir)) {
+      fs.mkdirSync(this.sslDir, { recursive: true });
+    }
+  }
 
   /**
    * Cron job runs every day at midnight to check for expiring certificates.
@@ -52,7 +60,7 @@ export class SslService {
         // Trigger Nginx reload with SSL
         this.nginxService.generateProxyConfig(
           project.subdomain,
-          10000, 
+          project.hostPort || 10000, 
           project.name,
           project.customDomain || undefined,
           true
@@ -66,22 +74,37 @@ export class SslService {
   }
 
   /**
-   * Simulates issuing a certificate via Certbot.
+   * Generates a self-signed certificate using OpenSSL.
    */
   async issueCertificate(domain: string): Promise<{ expiry: Date; certPath: string; keyPath: string }> {
-    this.logger.log(`🛡️  Issuing SSL certificate for domain: ${domain}...`);
+    this.logger.log(`🛡️  Generating Self-Signed SSL certificate for domain: ${domain}...`);
     
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const domainDir = path.join(this.sslDir, domain);
+    if (!fs.existsSync(domainDir)) {
+      fs.mkdirSync(domainDir, { recursive: true });
+    }
+
+    const keyPath = path.join(domainDir, 'privkey.pem');
+    const certPath = path.join(domainDir, 'fullchain.pem');
+
+    try {
+      // Generate self-signed cert using openssl
+      // Note: On Windows, openssl must be in PATH
+      const cmd = `openssl req -x509 -newkey rsa:4096 -keyout "${keyPath}" -out "${certPath}" -sha256 -days 365 -nodes -subj "/CN=${domain}"`;
+      execSync(cmd, { stdio: 'ignore' });
+      
+      this.logger.log(`✅ Certificate generated at: ${certPath}`);
+    } catch (err) {
+      this.logger.warn(`⚠️ OpenSSL failed or not found. Falling back to mock paths. Error: ${err.message}`);
+    }
 
     const now = new Date();
-    const expiry = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days from now
+    const expiry = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year for self-signed
 
-    // Mock paths
     return {
       expiry,
-      certPath: `/etc/potato/ssl/${domain}/fullchain.pem`,
-      keyPath: `/etc/potato/ssl/${domain}/privkey.pem`,
+      certPath,
+      keyPath,
     };
   }
 }

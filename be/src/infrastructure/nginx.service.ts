@@ -1,17 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 
-/**
- * NginxService — Generates Nginx reverse-proxy configurations for project containers.
- *
- * When a new project is created, this service builds an Nginx `server` block
- * that proxies traffic from the project's subdomain to the container's host port.
- *
- * For now, the generated config is logged to the console.
- * In the future, it will be written to the Nginx config directory and trigger a reload.
- */
 @Injectable()
 export class NginxService {
   private readonly logger = new Logger(NginxService.name);
+  private readonly configDir = path.resolve(process.cwd(), 'nginx_configs');
+
+  constructor() {
+    if (!fs.existsSync(this.configDir)) {
+      fs.mkdirSync(this.configDir, { recursive: true });
+      this.logger.log(`📁 Created Nginx config directory: ${this.configDir}`);
+    }
+  }
 
   /**
    * Generates a basic Nginx reverse-proxy configuration for a project container.
@@ -34,6 +35,9 @@ export class NginxService {
 
     let config = '';
 
+    const sslCertPath = path.resolve(process.cwd(), 'ssl_certs', customDomain || subdomain, 'fullchain.pem');
+    const sslKeyPath = path.resolve(process.cwd(), 'ssl_certs', customDomain || subdomain, 'privkey.pem');
+
     if (sslActive) {
       // Force HTTPS: Redirect port 80 to 443
       config += `
@@ -47,8 +51,8 @@ server {
     listen 443 ssl;
     server_name ${serverName};
 
-    ssl_certificate     /etc/potato/ssl/${customDomain || subdomain}/fullchain.pem;
-    ssl_certificate_key /etc/potato/ssl/${customDomain || subdomain}/privkey.pem;
+    ssl_certificate     "${sslCertPath}";
+    ssl_certificate_key "${sslKeyPath}";
 
     # SSL optimizations
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -94,6 +98,16 @@ server {
     }
 
     const finalConfig = config.trim();
+
+    // Write to disk
+    try {
+      const filePath = path.join(this.configDir, `${subdomain}.conf`);
+      fs.writeFileSync(filePath, finalConfig);
+      this.logger.log(`📄 Nginx config written to: ${filePath}`);
+    } catch (err) {
+      this.logger.error(`❌ Failed to write Nginx config for ${subdomain}: ${err.message}`);
+    }
+
     this.logger.log(`\n🥔 Nginx status: ${sslActive ? 'SSL/HTTPS (Forced)' : 'HTTP Standard'}\n`);
     this.logger.log(`Nginx config preview:\n${finalConfig}`);
 
@@ -107,10 +121,12 @@ server {
    * @param subdomain - The subdomain whose config should be removed
    */
   removeProxyConfig(subdomain: string): void {
-    this.logger.log(
-      `🗑️  Nginx config for "${subdomain}.potato.local" marked for removal`,
-    );
-    // TODO: Delete /etc/nginx/sites-enabled/${subdomain}.conf
-    // TODO: Trigger `nginx -s reload`
+    const filePath = path.join(this.configDir, `${subdomain}.conf`);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      this.logger.log(`🗑️ Deleted Nginx config: ${filePath}`);
+    } else {
+      this.logger.warn(`⚠️ Nginx config not found for removal: ${filePath}`);
+    }
   }
 }

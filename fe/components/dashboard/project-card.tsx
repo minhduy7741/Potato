@@ -7,17 +7,20 @@ import { Clock, ExternalLink, Play, Square, Trash2, Activity, Cpu, Database, Loa
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { AreaChart, Area, ResponsiveContainer, YAxis } from "recharts"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { AreaChart, Area, ResponsiveContainer, YAxis, XAxis, CartesianGrid } from "recharts"
 import { io, Socket } from "socket.io-client"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/api"
 
-export type ProjectStatus = "running" | "stopped" | "sprouting"
+export type ProjectStatus = "running" | "stopped" | "sprouting" | "hibernated"
 
 interface ProjectCardProps {
   id: number
   name: string
   status: string
   subdomain: string
+  hostPort?: number
   index?: number
   onUpdate: () => void
 }
@@ -35,6 +38,10 @@ const statusConfig: Record<string, any> = {
     label: "Stopped",
     className: "bg-muted text-muted-foreground border-border",
   },
+  hibernated: {
+    label: "Hibernated",
+    className: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  },
 }
 
 export function ProjectCard({
@@ -42,52 +49,47 @@ export function ProjectCard({
   name,
   status: initialStatus,
   subdomain,
+  hostPort,
   index = 0,
   onUpdate,
 }: ProjectCardProps) {
   const [status, setStatus] = useState(initialStatus)
   const [isActionLoading, setIsActionLoading] = useState(false)
   const [stats, setStats] = useState<any[]>([])
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const socketRef = useRef<Socket | null>(null)
 
   const statusInfo = statusConfig[status] || statusConfig.stopped
 
-  // Polling để cập nhật trạng thái khi đang 'sprouting'
+  // Polling to update status when 'sprouting'
   useEffect(() => {
     let interval: NodeJS.Timeout
-
     if (status === "sprouting") {
       interval = setInterval(async () => {
         try {
-          const response = await fetch(`http://localhost:3000/api/projects/${id}`)
-          if (response.ok) {
-            const data = await response.json()
-            if (data.status === "running") {
-              setStatus("running")
-              toast.success(`Dự án ${name} đã nảy mầm thành công! 🥔`, {
-                description: "Bạn có thể bắt đầu quản lý và truy cập ứng dụng.",
-                duration: 5000,
-              })
-              clearInterval(interval)
-              onUpdate()
-            } else if (data.status === "error") {
-              setStatus("error")
-              toast.error(`Gieo mầm dự án ${name} thất bại.`, {
-                description: "Vui lòng kiểm tra lại logs hệ thống.",
-              })
-              clearInterval(interval)
-              onUpdate()
-            }
+          const data = await apiFetch<any>(`/projects/${id}`)
+          if (data.status === "running") {
+            setStatus("running")
+            toast.success(`Dự án ${name} đã nảy mầm thành công! 🥔`, {
+              description: "Bạn có thể bắt đầu quản lý và truy cập ứng dụng.",
+              duration: 5000,
+            })
+            clearInterval(interval)
+            onUpdate()
+          } else if (data.status === "error") {
+            setStatus("error" as any)
+            toast.error(`Gieo mầm dự án ${name} thất bại.`, {
+              description: "Vui lòng kiểm tra lại logs hệ thống.",
+            })
+            clearInterval(interval)
+            onUpdate()
           }
         } catch (error) {
           console.error("Polling error:", error)
         }
       }, 3000)
     }
-
-    return () => {
-      if (interval) clearInterval(interval)
-    }
+    return () => { if (interval) clearInterval(interval) }
   }, [status, id, name, onUpdate])
 
   // Kết nối WebSocket để lấy stats thời gian thực
@@ -127,13 +129,9 @@ export function ProjectCard({
     setIsActionLoading(true)
     try {
       const method = action === "delete" ? "DELETE" : "PATCH"
-      const url = `http://localhost:3000/api/projects/${id}${action === "delete" ? "" : `/${action}`}`
-      
-      const response = await fetch(url, { method })
-      if (!response.ok) throw new Error(`Không thể ${action} dự án`)
-
+      const path = `/projects/${id}${action === "delete" ? "" : `/${action}`}`
+      await apiFetch(path, { method })
       toast.success(`Dự án đã ${action === "start" ? "khởi động" : action === "stop" ? "tạm dừng" : "đã xóa"}`)
-      
       if (action === "delete") {
         onUpdate()
       } else {
@@ -192,50 +190,68 @@ export function ProjectCard({
           </div>
         </CardHeader>
 
-        <CardContent className="relative space-y-4 pt-0">
+        <CardContent className="relative space-y-6 pt-2">
           {/* Real-time Charts Area */}
-          <div className="grid grid-cols-2 gap-2 h-16">
-            <div className="relative rounded-md bg-muted/30 p-2 overflow-hidden border border-border/50">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-                  <Cpu className="h-3 w-3" /> CPU
-                </span>
-                <span className="text-[10px] font-bold text-primary">{currentStats.cpu.toFixed(1)}%</span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* CPU Chart */}
+            <div className="relative rounded-xl border border-border/50 bg-[#121212] p-4 flex flex-col h-[260px] group shadow-sm">
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-blue-500/10 rounded-md border border-blue-500/20">
+                    <Cpu className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <span className="text-base font-semibold text-foreground">CPU Usage</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-blue-500">{currentStats.cpu.toFixed(2)}%</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Real-time</div>
+                </div>
               </div>
-              <div className="h-8 w-full">
+              <div className="h-full w-full mt-auto">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stats}>
+                  <AreaChart data={stats} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ADFA1D" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#ADFA1D" stopOpacity={0}/>
+                      <linearGradient id="colorCpuCard" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <Area type="monotone" dataKey="cpu" stroke="#ADFA1D" fillOpacity={1} fill="url(#colorCpu)" isAnimationActive={false} />
-                    <YAxis hide domain={[0, 100]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="time" stroke="#666" fontSize={10} tickLine={false} axisLine={false} dy={5} />
+                    <YAxis stroke="#666" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}`} domain={[0, 100]} />
+                    <Area type="monotone" dataKey="cpu" stroke="#3b82f6" strokeWidth={2} fill="url(#colorCpuCard)" isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
             
-            <div className="relative rounded-md bg-muted/30 p-2 overflow-hidden border border-border/50">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-                  <Database className="h-3 w-3" /> RAM
-                </span>
-                <span className="text-[10px] font-bold text-blue-400">{currentStats.ram.toFixed(1)}%</span>
+            {/* RAM Chart */}
+            <div className="relative rounded-xl border border-border/50 bg-[#121212] p-4 flex flex-col h-[260px] group shadow-sm">
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-emerald-500/10 rounded-md border border-emerald-500/20">
+                    <Database className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <span className="text-base font-semibold text-foreground">Memory Usage</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-emerald-500">{currentStats.ram.toFixed(2)}%</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Real-time</div>
+                </div>
               </div>
-              <div className="h-8 w-full">
+              <div className="h-full w-full mt-auto">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stats}>
+                  <AreaChart data={stats} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="colorRam" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#60A5FA" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#60A5FA" stopOpacity={0}/>
+                      <linearGradient id="colorRamCard" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <Area type="monotone" dataKey="ram" stroke="#60A5FA" fillOpacity={1} fill="url(#colorRam)" isAnimationActive={false} />
-                    <YAxis hide domain={[0, 100]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="time" stroke="#666" fontSize={10} tickLine={false} axisLine={false} dy={5} />
+                    <YAxis stroke="#666" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}`} domain={[0, 100]} />
+                    <Area type="monotone" dataKey="ram" stroke="#10b981" strokeWidth={2} fill="url(#colorRamCard)" isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -251,9 +267,15 @@ export function ProjectCard({
                 className={`h-8 w-8 transition-colors ${status === "running" ? "text-muted-foreground/30" : "text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10"}`}
                 onClick={() => handleActionWithState("start")}
                 disabled={status === "running" || !!actionLoading}
-                title="Start"
+                title={status === "hibernated" ? "Wake Up" : "Start"}
               >
-                {actionLoading === "start" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                {actionLoading === "start" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : status === "hibernated" ? (
+                  <Play className="h-4 w-4 text-amber-400" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
               </Button>
               <Button
                 variant="ghost"
@@ -269,14 +291,20 @@ export function ProjectCard({
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                onClick={() => {
-                  if (confirm(`Bạn có chắc muốn xóa dự án ${name}?`)) handleActionWithState("delete")
-                }}
+                onClick={() => setConfirmOpen(true)}
                 disabled={!!actionLoading}
                 title="Delete"
               >
                 {actionLoading === "delete" ? <Loader2 className="h-4 w-4 animate-spin text-red-400" /> : <Trash2 className="h-4 w-4" />}
               </Button>
+              <ConfirmDialog
+                open={confirmOpen}
+                title={`Xóa dự án "${name}"?`}
+                description="Hành động này sẽ xóa vĩnh viễn dự án và toàn bộ dữ liệu liên quan. Không thể hoàn tác."
+                confirmLabel="Xóa dự án"
+                onConfirm={() => { setConfirmOpen(false); handleActionWithState("delete") }}
+                onCancel={() => setConfirmOpen(false)}
+              />
             </div>
             
             <Button
@@ -285,7 +313,7 @@ export function ProjectCard({
               className="h-8 text-primary hover:text-primary hover:bg-primary/10 text-xs font-medium"
               asChild
             >
-              <Link href={`http://${subdomain}.potato.local`} target="_blank">
+              <Link href={hostPort ? `http://localhost:${hostPort}` : `http://${subdomain}.potato.local`} target="_blank">
                 Visit
                 <ExternalLink className="ml-1 h-3 w-3" />
               </Link>

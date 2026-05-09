@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/api"
 
 interface CreateDatabaseModalProps {
   isOpen: boolean
@@ -43,8 +44,7 @@ export function CreateDatabaseModal({ isOpen, onClose, onSuccess }: CreateDataba
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/projects")
-      const data = await response.json()
+      const data = await apiFetch<any[]>("/projects")
       setProjects(data)
     } catch (error) {
       toast.error("Không thể tải danh sách dự án")
@@ -60,9 +60,8 @@ export function CreateDatabaseModal({ isOpen, onClose, onSuccess }: CreateDataba
 
     setIsSubmitting(true)
     try {
-      const response = await fetch("http://localhost:3000/api/databases", {
+      await apiFetch("/databases", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           type: selectedType,
@@ -70,12 +69,9 @@ export function CreateDatabaseModal({ isOpen, onClose, onSuccess }: CreateDataba
         }),
       })
 
-      if (!response.ok) throw new Error("Lỗi khi tạo database")
-      
       toast.success("Đã gieo mầm Database thành công!")
       onSuccess()
       onClose()
-      // Reset form
       setName("")
       setSelectedType("")
       setSelectedProject("")

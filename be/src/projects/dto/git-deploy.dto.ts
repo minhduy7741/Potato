@@ -8,4 +8,8 @@ export class GitDeployDto {
   @IsString()
   @IsOptional()
   deployBranch?: string;
+
+  @IsString()
+  @IsOptional()
+  gitToken?: string;
 }

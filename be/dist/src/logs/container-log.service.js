@@ -21,10 +21,10 @@ let ContainerLogService = ContainerLogService_1 = class ContainerLogService {
     constructor(dockerService) {
         this.dockerService = dockerService;
     }
-    async startStreaming(socketId, containerId, client) {
+    async startStreaming(socketId, containerId, client, tail = 100) {
         this.stopStreaming(socketId);
         try {
-            const rawStream = await this.dockerService.getContainerLogStream(containerId);
+            const rawStream = await this.dockerService.getContainerLogStream(containerId, tail);
             this.activeStreams.set(socketId, rawStream);
             let buffer = '';
             rawStream.on('data', (chunk) => {

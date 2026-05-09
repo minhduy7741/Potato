@@ -12,16 +12,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChangePasswordDto = void 0;
 const class_validator_1 = require("class-validator");
 class ChangePasswordDto {
-    userId;
     currentPassword;
     newPassword;
 }
 exports.ChangePasswordDto = ChangePasswordDto;
-__decorate([
-    (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", Number)
-], ChangePasswordDto.prototype, "userId", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),

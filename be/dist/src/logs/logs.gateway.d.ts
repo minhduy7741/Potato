@@ -11,9 +11,9 @@ export declare class LogsGateway implements OnGatewayConnection, OnGatewayDiscon
     handleConnection(client: Socket): void;
     handleDisconnect(client: Socket): void;
     handleJoinProject(data: {
-        project_id: number;
+        projectId: number;
     }, client: Socket): Promise<void>;
     handleLeaveProject(data: {
-        project_id: number;
+        projectId: number;
     }, client: Socket): Promise<void>;
 }

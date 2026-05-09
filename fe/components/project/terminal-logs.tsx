@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo } from "react"
-import { Terminal, Copy, Check, Pause, Play, Trash2, Download, Search, X, Filter } from "lucide-react"
+import { Terminal, Copy, Check, Pause, Play, Trash2, Download, Search, X, Filter, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { io, Socket } from "socket.io-client"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 
 interface TerminalLogsProps {
   projectId: number
@@ -35,11 +35,21 @@ export function TerminalLogs({ projectId, projectName }: TerminalLogsProps) {
   const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
-    const socket = io("http://localhost:3000/logs")
+    console.log(`Connecting to logs socket for project ${projectId}...`)
+    const socket = io("http://localhost:3000/logs", {
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 5,
+    })
     socketRef.current = socket
-
+ 
     socket.on("connect", () => {
+      console.log("Connected to logs namespace!")
       socket.emit("join_project", { projectId })
+    })
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket Connection Error:", err)
+      setLogs((prev) => [...prev, { type: "error", message: `[SYSTEM] Lỗi kết nối Socket: ${err.message}` }])
     })
 
     socket.on("log", (message: string) => {
@@ -57,7 +67,10 @@ export function TerminalLogs({ projectId, projectName }: TerminalLogsProps) {
       setLogs((prev) => [...prev, { type: "error", message: `[ERROR] ${err.message}` }])
     })
 
-    return () => { socket.disconnect() }
+    return () => { 
+      console.log("Disconnecting logs socket...")
+      socket.disconnect() 
+    }
   }, [projectId, isPlaying])
 
   useEffect(() => {
@@ -84,9 +97,7 @@ export function TerminalLogs({ projectId, projectName }: TerminalLogsProps) {
   const handleDownload = async () => {
     setIsDownloading(true)
     try {
-      const response = await fetch(`http://localhost:3000/api/projects/${projectId}/logs/download`)
-      if (!response.ok) throw new Error("Không thể tải nhật ký")
-      const data = await response.json()
+      const data = await apiFetch<{ content: string; filename: string }>(`/projects/${projectId}/logs/download`)
       const blob = new Blob([data.content], { type: "text/plain" })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -192,9 +203,9 @@ export function TerminalLogs({ projectId, projectName }: TerminalLogsProps) {
                 )}
               >
                 {l.label}
-                {l.value !== "all" && counts[l.value as keyof typeof counts] > 0 && (
+                {l.value !== "all" && (counts as any)[l.value] > 0 && (
                   <span className={cn("ml-1 opacity-70", l.color)}>
-                    {counts[l.value as keyof typeof counts]}
+                    {(counts as any)[l.value]}
                   </span>
                 )}
               </button>

@@ -11,7 +11,7 @@ interface StatsCardsProps {
 export function StatsCards({ projects }: StatsCardsProps) {
   const activePlots = projects.length
   const runningSprouts = projects.filter((p) => p.status === "running").length
-  
+
   const stats = [
     {
       name: "Active Plots",

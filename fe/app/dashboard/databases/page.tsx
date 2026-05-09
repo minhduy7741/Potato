@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion } from "framer-motion"
 import { 
   Database, 
@@ -13,7 +14,11 @@ import {
   Loader2,
   Lock,
   Zap,
-  Info
+  Info,
+  Download,
+  UploadCloud,
+  History,
+  CheckCircle2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,7 +26,9 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { toast } from "sonner"
+import Link from "next/link"
 import { CreateDatabaseModal } from "@/components/dashboard/create-database-modal"
+import { apiFetch } from "@/lib/api"
 
 export default function DatabasesPage() {
   const [databases, setDatabases] = useState<any[]>([])
@@ -29,22 +36,27 @@ export default function DatabasesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
+  const [changePasswordDbId, setChangePasswordDbId] = useState<number | null>(null)
+  const [newPassword, setNewPassword] = useState("")
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [importingId, setImportingId] = useState<number | null>(null)
+  const [exportingId, setExportingId] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [activeImportDbId, setActiveImportDbId] = useState<number | null>(null)
+  const [historyModalDbId, setHistoryModalDbId] = useState<number | null>(null)
+  const [historyLogs, setHistoryLogs] = useState<any[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
   const [prevRunningCount, setPrevRunningCount] = useState<number>(0)
 
   const fetchDatabases = async (isSilent = false) => {
     if (!isSilent) setIsLoading(true)
     try {
-      const response = await fetch("http://localhost:3000/api/databases")
-      if (!response.ok) throw new Error("Không thể tải danh sách database")
-      const data = await response.json()
-      
-      // Kiểm tra xem có database nào vừa chuyển sang 'running' không để báo Toast
-      const currentRunningCount = data.filter((d: any) => d.status === 'running').length
+      const data = await apiFetch<any[]>("/databases")
+      const currentRunningCount = data.filter((d) => d.status === 'running').length
       if (prevRunningCount > 0 && currentRunningCount > prevRunningCount) {
-        toast.success("Một Sprout mới đã sẵn sàng! 🐬", {
-          description: "Chuỗi kết nối đã được cập nhật.",
-        })
+        toast.success("Một Sprout mới đã sẵn sàng! 🐬", { description: "Chuỗi kết nối đã được cập nhật." })
       }
       setPrevRunningCount(currentRunningCount)
       setDatabases(data)
@@ -87,17 +99,118 @@ export default function DatabasesPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa Sprout này? Dữ liệu sẽ mất vĩnh viễn.")) return
-    
     try {
-      const response = await fetch(`http://localhost:3000/api/databases/${id}`, {
-        method: "DELETE",
-      })
-      if (!response.ok) throw new Error("Lỗi khi xóa database")
+      await apiFetch(`/databases/${id}`, { method: "DELETE" })
       toast.success("Đã nhổ bỏ Sprout thành công")
       fetchDatabases()
     } catch (error: any) {
       toast.error(error.message)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (!newPassword.trim()) {
+      toast.error("Vui lòng nhập mật khẩu mới")
+      return
+    }
+    setIsChangingPassword(true)
+    try {
+      await apiFetch(`/databases/${changePasswordDbId}/password`, {
+        method: "PATCH",
+        body: JSON.stringify({ newPassword }),
+      })
+      toast.success("Đổi mật khẩu thành công! Các biến môi trường trong dự án cũng đã được cập nhật.")
+      fetchDatabases()
+      setChangePasswordDbId(null)
+      setNewPassword("")
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsChangingPassword(false)
+    }
+  }
+
+  const handleExport = async (id: number) => {
+    setExportingId(id);
+    try {
+      const token = localStorage.getItem('potato_token');
+      const res = await fetch(`http://localhost:3000/api/databases/${id}/export`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Xuất dữ liệu thất bại");
+      }
+      
+      const contentDisposition = res.headers.get('Content-Disposition');
+      let filename = `export_${id}.sql`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Đã xuất dữ liệu thành công");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setExportingId(null);
+    }
+  }
+
+  const triggerImport = (id: number) => {
+    setActiveImportDbId(id);
+    if (fileInputRef.current) fileInputRef.current.click();
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeImportDbId) return;
+    
+    setImportingId(activeImportDbId);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = localStorage.getItem('potato_token');
+      const res = await fetch(`http://localhost:3000/api/databases/${activeImportDbId}/import`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      });
+      
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Nạp dữ liệu thất bại');
+      }
+      
+      toast.success("Nạp dữ liệu thành công!");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setImportingId(null);
+      setActiveImportDbId(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  const handleOpenHistory = async (id: number) => {
+    setHistoryModalDbId(id);
+    setIsLoadingHistory(true);
+    try {
+      const data = await apiFetch<any[]>(`/databases/${id}/logs`);
+      setHistoryLogs(data);
+    } catch (error: any) {
+      toast.error("Không thể tải lịch sử thao tác");
+    } finally {
+      setIsLoadingHistory(false);
     }
   }
 
@@ -207,7 +320,15 @@ export default function DatabasesPage() {
                           {getDbIcon(db.type)}
                         </div>
                         <div>
-                          <CardTitle className="text-lg font-bold">{db.name}</CardTitle>
+                          <CardTitle className="text-lg font-bold">
+                            {db.name}
+                            {db.activityLogs?.some((l: any) => l.action === 'IMPORT' && l.status === 'SUCCESS') && (
+                              <Badge variant="secondary" className="ml-2 bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] py-0 px-1.5 h-4 align-middle">
+                                <CheckCircle2 className="mr-1 h-2.5 w-2.5" />
+                                Đã nạp dữ liệu
+                              </Badge>
+                            )}
+                          </CardTitle>
                           <CardDescription className="flex items-center gap-1.5">
                             <Badge variant="outline" className="text-[10px] uppercase font-mono px-1.5 py-0">
                               {db.type}
@@ -248,21 +369,86 @@ export default function DatabasesPage() {
                     <div className="flex items-center justify-between pt-2">
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" className="h-8 text-xs border-border hover:bg-muted" asChild>
-                          <a href="https://potato-docs.local" target="_blank">
+                          <Link href="/dashboard/docs">
                             <Info className="mr-1.5 h-3 w-3" />
                             Doc
-                          </a>
+                          </Link>
                         </Button>
-                        <Button variant="outline" size="sm" className="h-8 text-xs border-border hover:bg-muted" disabled={db.status !== 'running'}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 text-xs border-border hover:bg-muted" 
+                          onClick={() => {
+                            if (db.status !== 'running') {
+                              toast.error("Database chưa sẵn sàng")
+                              return
+                            }
+                            if (db.type !== 'mysql' && db.type !== 'postgres') {
+                              toast.error("Hiện chỉ hỗ trợ đổi mật khẩu cho MySQL và Postgres")
+                              return
+                            }
+                            setChangePasswordDbId(db.id)
+                          }}
+                        >
+                          <Lock className="mr-1.5 h-3 w-3" />
+                          Đổi Pass
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 text-xs border-border hover:bg-muted" 
+                          disabled={db.status !== 'running'}
+                          onClick={() => {
+                            const url = new URL(db.connectionString.replace('mongodb://', 'http://')) // Helper for parsing
+                            const credentials = `User: ${url.username}\nPass: ${url.password}`
+                            toast.info(`Thông tin truy cập cho ${db.name}`, {
+                              description: credentials,
+                              duration: 10000,
+                            })
+                          }}
+                        >
                           <Lock className="mr-1.5 h-3 w-3" />
                           Credentials
+                        </Button>
+                        {db.type !== 'redis' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 text-xs border-border hover:bg-muted" 
+                              disabled={db.status !== 'running' || exportingId === db.id}
+                              onClick={() => handleExport(db.id)}
+                            >
+                              {exportingId === db.id ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Download className="mr-1.5 h-3 w-3" />}
+                              Export
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 text-xs border-border hover:bg-muted" 
+                              disabled={db.status !== 'running' || importingId === db.id}
+                              onClick={() => triggerImport(db.id)}
+                            >
+                              {importingId === db.id ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <UploadCloud className="mr-1.5 h-3 w-3" />}
+                              Import
+                            </Button>
+                          </>
+                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 text-xs border-border hover:bg-muted" 
+                          onClick={() => handleOpenHistory(db.id)}
+                        >
+                          <History className="mr-1.5 h-3 w-3" />
+                          History
                         </Button>
                       </div>
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         className="h-8 w-8 text-red-400/50 hover:text-red-400 hover:bg-red-400/10"
-                        onClick={() => handleDelete(db.id)}
+                        onClick={() => setPendingDeleteId(db.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -281,6 +467,132 @@ export default function DatabasesPage() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchDatabases}
       />
+
+      {/* Confirm Delete Sprout */}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Xóa Sprout này?"
+        description="Dữ liệu database sẽ bị xóa vĩnh viễn và không thể khôi phục."
+        confirmLabel="Xóa Sprout"
+        onConfirm={() => { const id = pendingDeleteId!; setPendingDeleteId(null); handleDelete(id) }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
+
+      <input type="file" ref={fileInputRef} className="hidden" accept=".sql,.archive" onChange={handleFileChange} />
+
+      {/* Change Password Modal */}
+      {changePasswordDbId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl"
+          >
+            <h3 className="text-lg font-bold mb-2">Đổi mật khẩu Database</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Mật khẩu mới sẽ được áp dụng ngay lập tức và tự động đồng bộ vào biến môi trường của dự án.
+            </p>
+            <div className="space-y-4 mb-6">
+              <div className="space-y-2">
+                <Label>Mật khẩu mới</Label>
+                <Input
+                  type="text"
+                  placeholder="Nhập mật khẩu mới..."
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="font-mono bg-muted/50 border-border"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => { setChangePasswordDbId(null); setNewPassword(""); }} disabled={isChangingPassword}>
+                Hủy
+              </Button>
+              <Button onClick={handleChangePassword} disabled={isChangingPassword} className="bg-primary text-primary-foreground">
+                {isChangingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Lưu thay đổi"}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Database History Modal */}
+      {historyModalDbId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-2xl rounded-xl border border-border bg-card p-6 shadow-2xl max-h-[80vh] flex flex-col"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold">Lịch sử thao tác</h3>
+                <p className="text-xs text-muted-foreground">
+                  Bản ghi các hoạt động Import, Export và Đổi mật khẩu.
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setHistoryModalDbId(null)}>
+                <Plus className="h-4 w-4 rotate-45" />
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              {isLoadingHistory ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : historyLogs.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  Chưa có bản ghi lịch sử nào.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {historyLogs.map((log) => (
+                    <div key={log.id} className="p-3 rounded-lg border border-border bg-muted/30 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                          log.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+                        }`}>
+                          {log.action === 'IMPORT' ? <UploadCloud className="h-4 w-4" /> : 
+                           log.action === 'EXPORT' ? <Download className="h-4 w-4" /> : 
+                           <Lock className="h-4 w-4" />}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium">
+                            {log.action === 'IMPORT' ? 'Nạp dữ liệu (Import)' : 
+                             log.action === 'EXPORT' ? 'Xuất dữ liệu (Export)' : 
+                             'Đổi mật khẩu'}
+                            {log.filename && <span className="ml-2 text-xs text-muted-foreground font-normal">({log.filename})</span>}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {new Date(log.createdAt).toLocaleString('vi-VN')}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline" className={`text-[10px] ${
+                          log.status === 'SUCCESS' ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5' : 'border-red-500/30 text-red-500 bg-red-500/5'
+                        }`}>
+                          {log.status === 'SUCCESS' ? 'Thành công' : 'Thất bại'}
+                        </Badge>
+                        {log.message && (
+                          <div className="text-[10px] text-red-400 mt-1 max-w-[200px] truncate" title={log.message}>
+                            {log.message}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <Button onClick={() => setHistoryModalDbId(null)}>Đóng</Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

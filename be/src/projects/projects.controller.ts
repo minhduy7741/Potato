@@ -10,12 +10,17 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
+import { StatsCollectorService } from './stats-collector.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateEnvVariableDto } from './dto/create-env-variable.dto';
+import { UpdateEnvVariableDto } from './dto/update-env-variable.dto';
 import { UpdateResourcesDto } from './dto/update-resources.dto';
 import { GitDeployDto } from './dto/git-deploy.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 /**
  * ProjectsController — REST API endpoints for project container management.
@@ -23,22 +28,28 @@ import { GitDeployDto } from './dto/git-deploy.dto';
  * Base path: /api/projects
  */
 @Controller('projects')
+@UseGuards(JwtAuthGuard)
 export class ProjectsController {
   private readonly logger = new Logger(ProjectsController.name);
 
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly statsCollectorService: StatsCollectorService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() createProjectDto: CreateProjectDto) {
-    this.logger.log(`POST /projects — Creating "${createProjectDto.name}" for user ${createProjectDto.userId}`);
-    return this.projectsService.createProject(createProjectDto.userId, createProjectDto.name);
+  async create(@Request() req: any, @Body() createProjectDto: CreateProjectDto) {
+    const userId: number = req.user.id;
+    this.logger.log(`POST /projects — Creating "${createProjectDto.name}" for user ${userId}`);
+    return this.projectsService.createProject(userId, createProjectDto.name);
   }
 
   @Get()
-  async findAll() {
-    this.logger.log('GET /projects — Listing all projects');
-    return this.projectsService.findAll();
+  async findAll(@Request() req: any) {
+    const userId: number = req.user.id;
+    this.logger.log(`GET /projects — Listing projects for user ${userId}`);
+    return this.projectsService.findAll(userId);
   }
 
   @Get(':id')
@@ -53,6 +64,20 @@ export class ProjectsController {
     return this.projectsService.getProjectStats(id);
   }
 
+  @Get(':id/stats/history')
+  async getStatsHistory(@Param('id', ParseIntPipe) id: number) {
+    return this.statsCollectorService.getStats(id, 24);
+  }
+
+  @Patch(':id/restart-policy')
+  async updateRestartPolicy(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('restartPolicy') restartPolicy: string,
+  ) {
+    this.logger.log(`PATCH /projects/${id}/restart-policy — ${restartPolicy}`);
+    return this.projectsService.updateRestartPolicy(id, restartPolicy);
+  }
+
   @Patch(':id/start')
   async start(@Param('id', ParseIntPipe) id: number) {
     this.logger.log(`PATCH /projects/${id}/start`);
@@ -65,11 +90,22 @@ export class ProjectsController {
     return this.projectsService.stopProject(id);
   }
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  async remove(@Param('id', ParseIntPipe) id: number) {
-    this.logger.log(`DELETE /projects/${id}`);
-    return this.projectsService.deleteProject(id);
+  @Patch(':id/restart')
+  async restart(@Param('id', ParseIntPipe) id: number) {
+    this.logger.log(`PATCH /projects/${id}/restart`);
+    return this.projectsService.restartProject(id);
+  }
+
+  @Patch(':id/hibernate')
+  async hibernate(@Param('id', ParseIntPipe) id: number) {
+    this.logger.log(`PATCH /projects/${id}/hibernate`);
+    return this.projectsService.hibernateProject(id);
+  }
+
+  @Patch(':id/ssl/activate')
+  async activateSsl(@Param('id', ParseIntPipe) id: number) {
+    this.logger.log(`PATCH /projects/${id}/ssl/activate`);
+    return this.projectsService.activateSsl(id);
   }
 
   @Patch(':id/domain')
@@ -77,15 +113,23 @@ export class ProjectsController {
     @Param('id', ParseIntPipe) id: number,
     @Body('customDomain') customDomain: string,
   ) {
-    this.logger.log(`PATCH /projects/${id}/domain — Binding to "${customDomain}"`);
-    return this.projectsService.updateDomain(id, customDomain);
+    this.logger.log(`PATCH /projects/${id}/domain — ${customDomain}`);
+    return this.projectsService.updateCustomDomain(id, customDomain);
   }
 
-  @Patch(':id/ssl/enable')
-  async enableSsl(@Param('id', ParseIntPipe) id: number) {
-    this.logger.log(`PATCH /projects/${id}/ssl/enable`);
-    return this.projectsService.enableHttps(id);
+  @Post(':id/clone')
+  async clone(@Param('id', ParseIntPipe) id: number) {
+    this.logger.log(`POST /projects/${id}/clone`);
+    return this.projectsService.cloneProject(id);
   }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    this.logger.log(`DELETE /projects/${id}`);
+    return this.projectsService.deleteProject(id);
+  }
+
 
   @Get(':id/logs/download')
   async downloadLogs(@Param('id', ParseIntPipe) id: number) {
@@ -113,6 +157,15 @@ export class ProjectsController {
     return this.projectsService.addEnvVariable(id, dto.key, dto.value, dto.isSecret ?? false);
   }
 
+  @Patch(':id/env/:envId')
+  async updateEnvVariable(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('envId', ParseIntPipe) envId: number,
+    @Body() dto: UpdateEnvVariableDto,
+  ) {
+    return this.projectsService.updateEnvVariable(id, envId, dto.value, dto.isSecret);
+  }
+
   @Delete(':id/env/:envId')
   async deleteEnvVariable(
     @Param('id', ParseIntPipe) id: number,
@@ -132,7 +185,12 @@ export class ProjectsController {
     return this.projectsService.updateResources(id, dto.ramLimit ?? 256, dto.cpuLimit ?? 1);
   }
 
-  // ─── Git Deploy ───────────────────────────────────────────────────────
+  @Get(':id/activities')
+  async getActivityLogs(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.getActivityLogs(id);
+  }
+
+  // ─── Project Lifecycle ───────────────────────────────────────────────────────
 
   @Post(':id/deploy')
   async deploy(
@@ -140,7 +198,7 @@ export class ProjectsController {
     @Body() dto: GitDeployDto,
   ) {
     this.logger.log(`POST /projects/${id}/deploy — Repo: ${dto.gitRepo}`);
-    return this.projectsService.deployFromGit(id, dto.gitRepo, dto.deployBranch ?? 'main');
+    return this.projectsService.deployFromGit(id, dto.gitRepo, dto.deployBranch ?? 'main', dto.gitToken);
   }
 
   // ─── Deployment History ────────────────────────────────────────────────
