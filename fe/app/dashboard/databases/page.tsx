@@ -3,14 +3,14 @@
 import { useState, useEffect, useRef } from "react"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion } from "framer-motion"
-import { 
-  Database, 
-  Plus, 
-  Search, 
-  Copy, 
-  Check, 
-  Trash2, 
-  RefreshCw, 
+import {
+  Database,
+  Plus,
+  Search,
+  Copy,
+  Check,
+  Trash2,
+  RefreshCw,
   Loader2,
   Lock,
   Zap,
@@ -141,14 +141,14 @@ export default function DatabasesPage() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.message || "Xuất dữ liệu thất bại");
       }
-      
+
       const contentDisposition = res.headers.get('Content-Disposition');
       let filename = `export_${id}.sql`;
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="?([^"]+)"?/);
         if (match && match[1]) filename = match[1];
       }
-      
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -174,7 +174,7 @@ export default function DatabasesPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeImportDbId) return;
-    
+
     setImportingId(activeImportDbId);
     try {
       const formData = new FormData();
@@ -185,12 +185,12 @@ export default function DatabasesPage() {
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       });
-      
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.message || 'Nạp dữ liệu thất bại');
       }
-      
+
       toast.success("Nạp dữ liệu thành công!");
     } catch (error: any) {
       toast.error(error.message);
@@ -214,7 +214,7 @@ export default function DatabasesPage() {
     }
   }
 
-  const filteredDbs = databases.filter(db => 
+  const filteredDbs = databases.filter(db =>
     db.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     db.type.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -366,18 +366,18 @@ export default function DatabasesPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between pt-2 gap-2">
+                      <div className="flex items-center gap-2 overflow-x-auto flex-1 pb-2 scroll-custom [&>*]:shrink-0">
                         <Button variant="outline" size="sm" className="h-8 text-xs border-border hover:bg-muted" asChild>
                           <Link href="/dashboard/docs">
                             <Info className="mr-1.5 h-3 w-3" />
                             Doc
                           </Link>
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 text-xs border-border hover:bg-muted" 
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs border-border hover:bg-muted"
                           onClick={() => {
                             if (db.status !== 'running') {
                               toast.error("Database chưa sẵn sàng")
@@ -393,10 +393,10 @@ export default function DatabasesPage() {
                           <Lock className="mr-1.5 h-3 w-3" />
                           Đổi Pass
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 text-xs border-border hover:bg-muted" 
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs border-border hover:bg-muted"
                           disabled={db.status !== 'running'}
                           onClick={() => {
                             const url = new URL(db.connectionString.replace('mongodb://', 'http://')) // Helper for parsing
@@ -412,20 +412,20 @@ export default function DatabasesPage() {
                         </Button>
                         {db.type !== 'redis' && (
                           <>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 text-xs border-border hover:bg-muted" 
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs border-border hover:bg-muted"
                               disabled={db.status !== 'running' || exportingId === db.id}
                               onClick={() => handleExport(db.id)}
                             >
                               {exportingId === db.id ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Download className="mr-1.5 h-3 w-3" />}
                               Export
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 text-xs border-border hover:bg-muted" 
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs border-border hover:bg-muted"
                               disabled={db.status !== 'running' || importingId === db.id}
                               onClick={() => triggerImport(db.id)}
                             >
@@ -434,19 +434,19 @@ export default function DatabasesPage() {
                             </Button>
                           </>
                         )}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 text-xs border-border hover:bg-muted" 
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs border-border hover:bg-muted"
                           onClick={() => handleOpenHistory(db.id)}
                         >
                           <History className="mr-1.5 h-3 w-3" />
                           History
                         </Button>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 text-red-400/50 hover:text-red-400 hover:bg-red-400/10"
                         onClick={() => setPendingDeleteId(db.id)}
                       >
@@ -550,18 +550,17 @@ export default function DatabasesPage() {
                   {historyLogs.map((log) => (
                     <div key={log.id} className="p-3 rounded-lg border border-border bg-muted/30 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                          log.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
-                        }`}>
-                          {log.action === 'IMPORT' ? <UploadCloud className="h-4 w-4" /> : 
-                           log.action === 'EXPORT' ? <Download className="h-4 w-4" /> : 
-                           <Lock className="h-4 w-4" />}
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${log.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+                          }`}>
+                          {log.action === 'IMPORT' ? <UploadCloud className="h-4 w-4" /> :
+                            log.action === 'EXPORT' ? <Download className="h-4 w-4" /> :
+                              <Lock className="h-4 w-4" />}
                         </div>
                         <div>
                           <div className="text-sm font-medium">
-                            {log.action === 'IMPORT' ? 'Nạp dữ liệu (Import)' : 
-                             log.action === 'EXPORT' ? 'Xuất dữ liệu (Export)' : 
-                             'Đổi mật khẩu'}
+                            {log.action === 'IMPORT' ? 'Nạp dữ liệu (Import)' :
+                              log.action === 'EXPORT' ? 'Xuất dữ liệu (Export)' :
+                                'Đổi mật khẩu'}
                             {log.filename && <span className="ml-2 text-xs text-muted-foreground font-normal">({log.filename})</span>}
                           </div>
                           <div className="text-[10px] text-muted-foreground">
@@ -570,9 +569,8 @@ export default function DatabasesPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <Badge variant="outline" className={`text-[10px] ${
-                          log.status === 'SUCCESS' ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5' : 'border-red-500/30 text-red-500 bg-red-500/5'
-                        }`}>
+                        <Badge variant="outline" className={`text-[10px] ${log.status === 'SUCCESS' ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5' : 'border-red-500/30 text-red-500 bg-red-500/5'
+                          }`}>
                           {log.status === 'SUCCESS' ? 'Thành công' : 'Thất bại'}
                         </Badge>
                         {log.message && (

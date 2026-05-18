@@ -23,9 +23,33 @@ async function main() {
     console.log('✅ Admin user created.');
   }
 
-  // 2. Clear existing test data for this user to avoid conflicts
-  // Note: In production you'd be more careful, but for seed it's fine
-  await prisma.project.deleteMany({ where: { userId: admin.id } });
+  // 1.5 Ensure Regular User exists
+  const userEmail = 'user@potato.com';
+  let regularUser = await prisma.user.findUnique({ where: { email: userEmail } });
+
+  if (!regularUser) {
+    const hashedPassword = await bcrypt.hash('userpassword', 10);
+    regularUser = await prisma.user.create({
+      data: {
+        email: userEmail,
+        password: hashedPassword,
+        name: 'Regular Dev',
+        role: 'USER',
+      },
+    });
+    console.log('✅ Regular user created.');
+  } else {
+    const hashedPassword = await bcrypt.hash('userpassword', 10);
+    regularUser = await prisma.user.update({
+      where: { email: userEmail },
+      data: { password: hashedPassword },
+    });
+    console.log('✅ Regular user password force reset to "userpassword".');
+  }
+
+  // 2. Clear existing test data to avoid conflicts
+  await prisma.databaseInstance.deleteMany();
+  await prisma.project.deleteMany({ where: { userId: { in: [admin.id, regularUser.id] } } });
 
   const now = new Date();
   const ninetyDays = 90 * 24 * 60 * 60 * 1000;
@@ -80,7 +104,23 @@ async function main() {
     }
   });
 
-  console.log('✅ Seeding complete! 3 projects and 2 databases created.');
+  // Project 4: User Project (Dành cho tài khoản user thường)
+  const p4 = await prisma.project.create({
+    data: {
+      name: 'User-App-Plot',
+      status: 'running',
+      subdomain: 'user-app',
+      sslStatus: 'none',
+      userId: regularUser.id,
+      databases: {
+        create: [
+          { name: 'user-db', type: 'mysql', status: 'running', connectionString: 'mysql://root:potato123@localhost:20003/userdb' }
+        ]
+      }
+    }
+  });
+
+  console.log('✅ Seeding complete! 4 projects and 3 databases created.');
 }
 
 main()

@@ -165,9 +165,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 {project.containerId
                   ? <>Container: <span className="font-mono text-xs">{project.containerId?.substring(0, 12)}</span> · </>
                   : null}
-                {project.hostPort
-                  ? <>Local URL: <span className="font-mono text-primary">localhost:{project.hostPort}</span></>
-                  : <>Subdomain: {project.subdomain}.potato.local</>}
+                Subdomain: <span className="font-mono text-primary mr-3">{project.subdomain}.potato.local</span>
+                {project.hostPort && (
+                  <>· Local Port: <span className="font-mono text-primary ml-1">localhost:{project.hostPort}</span></>
+                )}
               </p>
             </div>
           </div>

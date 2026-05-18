@@ -200,7 +200,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description (Mock)</Label>
+              <Label htmlFor="description">Description</Label>
               <Input
                 id="description"
                 defaultValue="Main API service for the Potato platform"

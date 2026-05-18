@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import {
   FolderKanban,
   Database,
@@ -9,8 +10,11 @@ import {
   BookOpen,
   Home,
   LogOut,
+  Activity,
+  Shield,
 } from "lucide-react"
 import { PotatoLogo } from "@/components/potato-logo"
+import { Badge } from "@/components/ui/badge"
 import {
   Sidebar,
   SidebarContent,
@@ -60,6 +64,17 @@ const secondaryItems = [
 
 export function DashboardSidebar() {
   const pathname = usePathname()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    try {
+      const userJson = localStorage.getItem("potato_user")
+      if (userJson) {
+        const user = JSON.parse(userJson)
+        setIsAdmin(user?.role === "ADMIN")
+      }
+    } catch {}
+  }, [])
 
   return (
     <Sidebar>
@@ -111,6 +126,34 @@ export function DashboardSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin-only section */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="flex items-center gap-1.5">
+              <Shield className="h-3 w-3 text-amber-400" />
+              <span className="text-amber-400/80">Admin</span>
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/dashboard/system"}
+                  >
+                    <Link href="/dashboard/system" className="flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      <span>System Monitor</span>
+                      <Badge className="ml-auto text-[9px] px-1 py-0 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                        LIVE
+                      </Badge>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

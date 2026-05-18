@@ -380,7 +380,7 @@ export class ProjectsService {
     // Update Nginx configuration to reflect new domain
     this.nginxService.generateProxyConfig(
       project.subdomain,
-      10000, // This is a mock port logic, we should probably fetch the real hostPort if we store it
+      project.hostPort ?? 10000, // Sử dụng port thực tế của dự án từ database
       project.name,
       customDomain ?? undefined
     );
@@ -416,7 +416,7 @@ export class ProjectsService {
       // Update Nginx with SSL active
       this.nginxService.generateProxyConfig(
         project.subdomain,
-        10000, // Still mock port, ideally fetch from docker
+        project.hostPort ?? 10000, // Sử dụng port thực tế của dự án từ database
         project.name,
         project.customDomain ?? undefined,
         true // sslActive

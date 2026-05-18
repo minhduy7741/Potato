@@ -17,9 +17,10 @@ export declare class ProjectsService {
         proxyUrl: string;
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -35,15 +36,15 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     private provisionProjectBackground;
     startProject(projectId: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -59,14 +60,14 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     stopProject(projectId: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -82,14 +83,14 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     hibernateProject(projectId: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -105,14 +106,14 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     restartProject(projectId: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -128,14 +129,14 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     cloneProject(projectId: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -151,14 +152,14 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     updateDomain(id: number, customDomain: string | null): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -174,14 +175,14 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     enableHttps(id: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -197,7 +198,6 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     deleteProject(projectId: number): Promise<{
         message: string;
@@ -221,18 +221,19 @@ export declare class ProjectsService {
         databases: {
             id: number;
             name: string;
-            type: string;
+            createdAt: Date;
             status: string;
+            type: string;
             connectionString: string | null;
             projectId: number;
-            createdAt: Date;
         }[];
     } & {
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -248,22 +249,21 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     })[]>;
     findOne(projectId: number): Promise<{
         databases: {
             id: number;
             name: string;
-            type: string;
+            createdAt: Date;
             status: string;
+            type: string;
             connectionString: string | null;
             projectId: number;
-            createdAt: Date;
         }[];
         envVariables: {
             id: number;
-            projectId: number;
             createdAt: Date;
+            projectId: number;
             key: string;
             value: string;
             isSecret: boolean;
@@ -271,9 +271,10 @@ export declare class ProjectsService {
     } & {
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -289,12 +290,11 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     getEnvVariables(projectId: number): Promise<{
         id: number;
-        projectId: number;
         createdAt: Date;
+        projectId: number;
         key: string;
         value: string;
         isSecret: boolean;
@@ -302,16 +302,16 @@ export declare class ProjectsService {
     addEnvVariable(projectId: number, key: string, value: string, isSecret: boolean): Promise<any>;
     updateEnvVariable(projectId: number, envId: number, value?: string, isSecret?: boolean): Promise<{
         id: number;
-        projectId: number;
         createdAt: Date;
+        projectId: number;
         key: string;
         value: string;
         isSecret: boolean;
     }>;
     deleteEnvVariable(projectId: number, envId: number): Promise<{
         id: number;
-        projectId: number;
         createdAt: Date;
+        projectId: number;
         key: string;
         value: string;
         isSecret: boolean;
@@ -319,9 +319,10 @@ export declare class ProjectsService {
     updateResources(projectId: number, ramMB: number, cpuCores: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -337,14 +338,14 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     activateSsl(projectId: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -360,14 +361,14 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     updateCustomDomain(projectId: number, customDomain: string): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -383,7 +384,6 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     deployFromGit(projectId: number, gitRepo: string, branch?: string, gitToken?: string): Promise<{
         deploymentId: number;
@@ -394,9 +394,9 @@ export declare class ProjectsService {
     getDeployments(projectId: number): Promise<{
         log: string | null;
         id: number;
+        createdAt: Date;
         status: string;
         projectId: number;
-        createdAt: Date;
         trigger: string;
         gitCommit: string | null;
         gitMessage: string | null;
@@ -407,17 +407,18 @@ export declare class ProjectsService {
     logActivity(projectId: number, type: string, message: string): Promise<void>;
     getActivityLogs(projectId: number): Promise<{
         id: number;
+        createdAt: Date;
         type: string;
         projectId: number;
-        createdAt: Date;
         message: string;
     }[]>;
     updateRestartPolicy(projectId: number, policy: string): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -433,7 +434,6 @@ export declare class ProjectsService {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     getProjectLogs(projectId: number): Promise<string>;
 }

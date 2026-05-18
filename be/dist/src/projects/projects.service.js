@@ -302,7 +302,7 @@ let ProjectsService = ProjectsService_1 = class ProjectsService {
             where: { id },
             data: { customDomain },
         });
-        this.nginxService.generateProxyConfig(project.subdomain, 10000, project.name, customDomain ?? undefined);
+        this.nginxService.generateProxyConfig(project.subdomain, project.hostPort ?? 10000, project.name, customDomain ?? undefined);
         return updated;
     }
     async enableHttps(id) {
@@ -321,7 +321,7 @@ let ProjectsService = ProjectsService_1 = class ProjectsService {
                     sslExpiry: expiry,
                 },
             });
-            this.nginxService.generateProxyConfig(project.subdomain, 10000, project.name, project.customDomain ?? undefined, true);
+            this.nginxService.generateProxyConfig(project.subdomain, project.hostPort ?? 10000, project.name, project.customDomain ?? undefined, true);
             return updated;
         }
         catch (error) {

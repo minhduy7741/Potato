@@ -16,9 +16,10 @@ export declare class ProjectsController {
         proxyUrl: string;
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -34,24 +35,24 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     findAll(req: any): Promise<({
         databases: {
             id: number;
             name: string;
-            type: string;
+            createdAt: Date;
             status: string;
+            type: string;
             connectionString: string | null;
             projectId: number;
-            createdAt: Date;
         }[];
     } & {
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -67,22 +68,21 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     })[]>;
     findOne(id: number): Promise<{
         databases: {
             id: number;
             name: string;
-            type: string;
+            createdAt: Date;
             status: string;
+            type: string;
             connectionString: string | null;
             projectId: number;
-            createdAt: Date;
         }[];
         envVariables: {
             id: number;
-            projectId: number;
             createdAt: Date;
+            projectId: number;
             key: string;
             value: string;
             isSecret: boolean;
@@ -90,9 +90,10 @@ export declare class ProjectsController {
     } & {
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -108,7 +109,6 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     getStats(id: number): Promise<{
         projectId: number;
@@ -133,9 +133,10 @@ export declare class ProjectsController {
     updateRestartPolicy(id: number, restartPolicy: string): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -151,14 +152,14 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     start(id: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -174,14 +175,14 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     stop(id: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -197,14 +198,14 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     restart(id: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -220,14 +221,14 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     hibernate(id: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -243,14 +244,14 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     activateSsl(id: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -266,14 +267,14 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     updateDomain(id: number, customDomain: string): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -289,14 +290,14 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     clone(id: number): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -312,7 +313,6 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     remove(id: number): Promise<{
         message: string;
@@ -323,8 +323,8 @@ export declare class ProjectsController {
     }>;
     getEnvVariables(id: number): Promise<{
         id: number;
-        projectId: number;
         createdAt: Date;
+        projectId: number;
         key: string;
         value: string;
         isSecret: boolean;
@@ -332,16 +332,16 @@ export declare class ProjectsController {
     addEnvVariable(id: number, dto: CreateEnvVariableDto): Promise<any>;
     updateEnvVariable(id: number, envId: number, dto: UpdateEnvVariableDto): Promise<{
         id: number;
-        projectId: number;
         createdAt: Date;
+        projectId: number;
         key: string;
         value: string;
         isSecret: boolean;
     }>;
     deleteEnvVariable(id: number, envId: number): Promise<{
         id: number;
-        projectId: number;
         createdAt: Date;
+        projectId: number;
         key: string;
         value: string;
         isSecret: boolean;
@@ -349,9 +349,10 @@ export declare class ProjectsController {
     updateResources(id: number, dto: UpdateResourcesDto): Promise<{
         id: number;
         name: string;
-        status: string;
         createdAt: Date;
+        userId: number;
         containerId: string | null;
+        status: string;
         ramLimit: number;
         cpuLimit: number;
         hostPort: number | null;
@@ -367,13 +368,12 @@ export declare class ProjectsController {
         restartPolicy: string;
         autoScale: boolean;
         notificationsEnabled: boolean;
-        userId: number;
     }>;
     getActivityLogs(id: number): Promise<{
         id: number;
+        createdAt: Date;
         type: string;
         projectId: number;
-        createdAt: Date;
         message: string;
     }[]>;
     deploy(id: number, dto: GitDeployDto): Promise<{
@@ -384,9 +384,9 @@ export declare class ProjectsController {
     getDeployments(id: number): Promise<{
         log: string | null;
         id: number;
+        createdAt: Date;
         status: string;
         projectId: number;
-        createdAt: Date;
         trigger: string;
         gitCommit: string | null;
         gitMessage: string | null;

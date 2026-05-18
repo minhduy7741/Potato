@@ -115,11 +115,20 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
           <CardContent className="pt-0">
             <InfoRow
               icon={<Globe className="h-4 w-4" />}
-              label="Local URL"
-              value={project.hostPort ? `localhost:${project.hostPort}` : `${project.subdomain}.potato.local`}
+              label="Subdomain"
+              value={`${project.subdomain}.potato.local`}
               link
               copyable
             />
+            {project.hostPort && (
+              <InfoRow
+                icon={<ExternalLink className="h-4 w-4" />}
+                label="Local Port"
+                value={`localhost:${project.hostPort}`}
+                link
+                copyable
+              />
+            )}
             <InfoRow
               icon={<GitBranch className="h-4 w-4" />}
               label="Sprout ID"

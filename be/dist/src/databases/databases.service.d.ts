@@ -6,12 +6,22 @@ export declare class DatabasesService {
     private readonly logger;
     constructor(prisma: PrismaService, docker: DockerService);
     findAll(): Promise<({
+        activityLogs: {
+            id: number;
+            createdAt: Date;
+            status: string;
+            databaseId: number;
+            action: string;
+            filename: string | null;
+            message: string | null;
+        }[];
         project: {
             id: number;
             name: string;
-            status: string;
             createdAt: Date;
+            userId: number;
             containerId: string | null;
+            status: string;
             ramLimit: number;
             cpuLimit: number;
             hostPort: number | null;
@@ -27,25 +37,15 @@ export declare class DatabasesService {
             restartPolicy: string;
             autoScale: boolean;
             notificationsEnabled: boolean;
-            userId: number;
         };
-        activityLogs: {
-            id: number;
-            status: string;
-            createdAt: Date;
-            databaseId: number;
-            action: string;
-            filename: string | null;
-            message: string | null;
-        }[];
     } & {
         id: number;
         name: string;
-        type: string;
+        createdAt: Date;
         status: string;
+        type: string;
         connectionString: string | null;
         projectId: number;
-        createdAt: Date;
     })[]>;
     create(data: {
         name: string;
@@ -54,11 +54,11 @@ export declare class DatabasesService {
     }): Promise<{
         id: number;
         name: string;
-        type: string;
+        createdAt: Date;
         status: string;
+        type: string;
         connectionString: string | null;
         projectId: number;
-        createdAt: Date;
     }>;
     private provisionDatabaseBackground;
     remove(id: number): Promise<{
@@ -67,8 +67,8 @@ export declare class DatabasesService {
     private allocatePort;
     getLogs(id: number): Promise<{
         id: number;
-        status: string;
         createdAt: Date;
+        status: string;
         databaseId: number;
         action: string;
         filename: string | null;

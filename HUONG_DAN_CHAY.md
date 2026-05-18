@@ -55,5 +55,8 @@ npm run dev
 | Thành phần | Lệnh thực hiện |
 | :--- | :--- |
 | **Database** | `cd be && docker-compose up -d` |
-| **Backend** | `cd be && npm install && npx prisma db push && npm run start:dev` |
+| **Backend** | `cd be && npm install && npx prisma db push && npm run start:dev` |npx prisma studio
+
 | **Frontend** | `cd fe && npm install && npm run dev` |
+Email: user@potato.com
+Mật khẩu: userpassword

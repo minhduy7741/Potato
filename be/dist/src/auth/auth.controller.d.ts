@@ -11,10 +11,10 @@ export declare class AuthController {
     register(registerDto: RegisterDto): Promise<{
         user: {
             id: number;
-            name: string | null;
-            createdAt: Date;
             email: string;
+            name: string | null;
             role: import("@prisma/client").$Enums.Role;
+            createdAt: Date;
         };
         accessToken: string;
         message: string;
@@ -22,10 +22,10 @@ export declare class AuthController {
     login(loginDto: LoginDto): Promise<{
         user: {
             id: number;
-            name: string | null;
-            createdAt: Date;
             email: string;
+            name: string | null;
             role: import("@prisma/client").$Enums.Role;
+            createdAt: Date;
         };
         accessToken: string;
         message: string;
@@ -36,10 +36,10 @@ export declare class AuthController {
     }>;
     updateProfile(req: any, dto: UpdateProfileDto): Promise<{
         id: number;
-        name: string | null;
-        createdAt: Date;
         email: string;
+        name: string | null;
         role: import("@prisma/client").$Enums.Role;
+        createdAt: Date;
     }>;
     deleteAccount(req: any): Promise<{
         message: string;

@@ -5,12 +5,22 @@ export declare class DatabasesController {
     private readonly databasesService;
     constructor(databasesService: DatabasesService);
     findAll(): Promise<({
+        activityLogs: {
+            id: number;
+            createdAt: Date;
+            status: string;
+            databaseId: number;
+            action: string;
+            filename: string | null;
+            message: string | null;
+        }[];
         project: {
             id: number;
             name: string;
-            status: string;
             createdAt: Date;
+            userId: number;
             containerId: string | null;
+            status: string;
             ramLimit: number;
             cpuLimit: number;
             hostPort: number | null;
@@ -26,39 +36,29 @@ export declare class DatabasesController {
             restartPolicy: string;
             autoScale: boolean;
             notificationsEnabled: boolean;
-            userId: number;
         };
-        activityLogs: {
-            id: number;
-            status: string;
-            createdAt: Date;
-            databaseId: number;
-            action: string;
-            filename: string | null;
-            message: string | null;
-        }[];
     } & {
         id: number;
         name: string;
-        type: string;
+        createdAt: Date;
         status: string;
+        type: string;
         connectionString: string | null;
         projectId: number;
-        createdAt: Date;
     })[]>;
     create(createDbDto: CreateDatabaseDto): Promise<{
         id: number;
         name: string;
-        type: string;
+        createdAt: Date;
         status: string;
+        type: string;
         connectionString: string | null;
         projectId: number;
-        createdAt: Date;
     }>;
     getLogs(id: number): Promise<{
         id: number;
-        status: string;
         createdAt: Date;
+        status: string;
         databaseId: number;
         action: string;
         filename: string | null;
