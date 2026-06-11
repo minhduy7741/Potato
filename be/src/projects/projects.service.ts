@@ -17,6 +17,8 @@ import { DockerService } from '../docker/docker.service';
 import { NginxService } from '../infrastructure/nginx.service';
 import { SslService } from '../infrastructure/ssl.service';
 import { DatabasesService } from '../databases/databases.service';
+import { encrypt, decrypt } from '../common/encryption.util';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 /** Port range for project containers */
 const PORT_RANGE_MIN = 10000;
@@ -465,6 +467,25 @@ export class ProjectsService {
       }
     }
 
+    // 2.5 Remove Docker image if it exists
+    try {
+      const imageName = `potato-app-${projectId}:latest`;
+      await this.dockerService.removeImage(imageName);
+    } catch (error) {
+      this.logger.warn(`Failed to clean up image for project ${projectId}: ${error}`);
+    }
+
+    // 2.6 Remove host volume directory
+    try {
+      const hostVolumeDir = path.resolve(path.join(process.cwd(), 'uploads', 'volumes', `project-${projectId}`));
+      if (fs.existsSync(hostVolumeDir)) {
+        fs.rmSync(hostVolumeDir, { recursive: true, force: true });
+        this.logger.log(`Cleaned up host volume directory for project ${projectId}: ${hostVolumeDir}`);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to clean up host volume directory for project ${projectId}: ${error}`);
+    }
+
     // Clean up attached databases and their containers to avoid FK constraint error
     const attachedDbs = await this.prisma.databaseInstance.findMany({
       where: { projectId: projectId }
@@ -563,10 +584,14 @@ export class ProjectsService {
 
   async getEnvVariables(projectId: number) {
     await this.findProjectOrFail(projectId);
-    return this.prisma.envVariable.findMany({
+    const envs = await this.prisma.envVariable.findMany({
       where: { projectId },
       orderBy: { createdAt: 'asc' },
     });
+    return envs.map(e => ({
+      ...e,
+      value: e.isSecret ? decrypt(e.value) : e.value
+    }));
   }
 
   async addEnvVariable(projectId: number, key: string, value: string, isSecret: boolean) {
@@ -575,15 +600,17 @@ export class ProjectsService {
       where: { projectId, key },
     });
 
+    const encryptedValue = isSecret ? encrypt(value) : value;
+
     let result;
     if (existing) {
       result = await this.prisma.envVariable.update({
         where: { id: existing.id },
-        data: { value, isSecret },
+        data: { value: encryptedValue, isSecret },
       });
     } else {
       result = await this.prisma.envVariable.create({
-        data: { key, value, isSecret, projectId },
+        data: { key, value: encryptedValue, isSecret, projectId },
       });
     }
 
@@ -604,8 +631,14 @@ export class ProjectsService {
     if (!env) throw new NotFoundException('Environment variable not found');
 
     const data: any = {};
-    if (value !== undefined) data.value = value;
     if (isSecret !== undefined) data.isSecret = isSecret;
+    if (value !== undefined) {
+      const activeSecret = isSecret !== undefined ? isSecret : env.isSecret;
+      data.value = activeSecret ? encrypt(value) : value;
+    } else if (isSecret !== undefined) {
+      const currentValue = env.isSecret ? decrypt(env.value) : env.value;
+      data.value = isSecret ? encrypt(currentValue) : currentValue;
+    }
 
     const result = await this.prisma.envVariable.update({
       where: { id: envId },
@@ -761,6 +794,17 @@ export class ProjectsService {
     };
 
     try {
+      // ── Host Resource Check (Chống Overcommit) ──
+      const freeRamBytes = os.freemem();
+      const totalRamBytes = os.totalmem();
+      const requiredRamBytes = project.ramLimit * 1024 * 1024;
+      const minReservedRam = totalRamBytes * 0.05; // 5% reserve
+
+      if (freeRamBytes < requiredRamBytes || (freeRamBytes - requiredRamBytes) < minReservedRam) {
+        const freeRamMB = Math.round(freeRamBytes / (1024 * 1024));
+        throw new Error(`Hệ thống không đủ tài nguyên trống. RAM khả dụng hiện tại: ${freeRamMB}MB, yêu cầu: ${project.ramLimit}MB (cần chừa lại tối thiểu 5% RAM hệ thống để chạy ổn định). Vui lòng nâng cấp máy chủ hoặc tắt bớt dự án khác.`);
+      }
+
       let hostPort = project.hostPort;
       if (!hostPort) {
         hostPort = await this.allocatePort();
@@ -772,7 +816,7 @@ export class ProjectsService {
       }
 
       const containerName = `potato-${project.subdomain}`;
-      const imageName = `potato-app-${project.id}:latest`;
+      const imageName = `potato-app-${project.id}:dep-${deploymentId}`;
 
       await updateLog(`Gieo mầm: Bắt đầu clone ${gitRepo} (branch: ${branch})...`);
       fs.mkdirSync(tmpDir, { recursive: true });
@@ -867,12 +911,21 @@ export class ProjectsService {
         if (fs.existsSync(path.join(tmpDir, 'composer.json'))) {
           detectedLang = 'php-laravel';
           await updateLog('Phát hiện PHP/Laravel (composer.json). Đang tạo cấu hình Docker...');
+          
+          // Ensure Laravel storage directories exist in source before building/copying
+          fs.mkdirSync(path.join(tmpDir, 'storage', 'framework', 'views'), { recursive: true });
+          fs.mkdirSync(path.join(tmpDir, 'storage', 'framework', 'cache', 'data'), { recursive: true });
+          fs.mkdirSync(path.join(tmpDir, 'storage', 'framework', 'sessions'), { recursive: true });
+          fs.mkdirSync(path.join(tmpDir, 'storage', 'logs'), { recursive: true });
+          fs.mkdirSync(path.join(tmpDir, 'bootstrap', 'cache'), { recursive: true });
+
           fs.writeFileSync(path.join(tmpDir, 'Dockerfile'), `
 FROM webdevops/php-nginx:8.2
 ENV WEB_DOCUMENT_ROOT=/app/public
 ENV WEB_DOCUMENT_INDEX=index.php
 WORKDIR /app
 COPY . .
+RUN mkdir -p storage/framework/views storage/framework/cache/data storage/framework/sessions bootstrap/cache
 RUN chown -R application:application /app && chmod -R 755 /app
 RUN composer install --no-interaction --optimize-autoloader --no-dev || true
 RUN chmod -R 777 storage bootstrap/cache || true
@@ -880,17 +933,79 @@ EXPOSE 80
           `.trim());
         } else if (fs.existsSync(path.join(tmpDir, 'package.json'))) {
           detectedLang = 'nodejs';
-          await updateLog('Phát hiện Node.js (package.json). Đang tạo cấu hình Docker...');
-          fs.writeFileSync(path.join(tmpDir, 'Dockerfile'), `
-FROM node:20-alpine
+          await updateLog('Phát hiện Node.js (package.json). Đang cấu hình Docker tối ưu...');
+
+          let packageJson: any = {};
+          try {
+            packageJson = JSON.parse(fs.readFileSync(path.join(tmpDir, 'package.json'), 'utf8'));
+          } catch (e) {}
+
+          const hasBuildScript = packageJson.scripts && packageJson.scripts.build;
+          const hasStartScript = packageJson.scripts && packageJson.scripts.start;
+
+          const hasYarn = fs.existsSync(path.join(tmpDir, 'yarn.lock'));
+          const hasPnpm = fs.existsSync(path.join(tmpDir, 'pnpm-lock.yaml'));
+          const hasBun = fs.existsSync(path.join(tmpDir, 'bun.lockb')) || fs.existsSync(path.join(tmpDir, 'bun.lock'));
+
+          let baseImage = 'node:20-alpine';
+          let installCmd = 'npm install';
+          let buildCmd = 'npm run build';
+          let startCmd = 'npm start';
+
+          if (hasBun) {
+            baseImage = 'oven/bun:1-alpine';
+            installCmd = 'bun install';
+            buildCmd = 'bun run build';
+            startCmd = 'bun start';
+            await updateLog('-> Phát hiện Bun lockfile. Sử dụng Bun Runtime.');
+          } else if (hasPnpm) {
+            baseImage = 'node:20-alpine';
+            installCmd = 'npm install -g pnpm && pnpm install';
+            buildCmd = 'pnpm build';
+            startCmd = 'pnpm start';
+            await updateLog('-> Phát hiện PNPM lockfile. Sử dụng PNPM Package Manager.');
+          } else if (hasYarn) {
+            baseImage = 'node:20-alpine';
+            installCmd = 'yarn install';
+            buildCmd = 'yarn build';
+            startCmd = 'yarn start';
+            await updateLog('-> Phát hiện Yarn lockfile. Sử dụng Yarn Package Manager.');
+          } else {
+            await updateLog('-> Sử dụng NPM Package Manager.');
+          }
+
+          let dockerfileContent = `
+FROM ${baseImage}
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN chmod -R 755 /app
-EXPOSE 3000
-CMD ["npm", "start"]
-          `.trim());
+`.trim();
+
+          if (hasBun) {
+            dockerfileContent += `\nCOPY package.json bun.lockb* bun.lock* ./\n`;
+          } else if (hasPnpm) {
+            dockerfileContent += `\nCOPY package.json pnpm-lock.yaml* ./\n`;
+          } else if (hasYarn) {
+            dockerfileContent += `\nCOPY package.json yarn.lock* ./\n`;
+          } else {
+            dockerfileContent += `\nCOPY package*.json ./\n`;
+          }
+
+          dockerfileContent += `RUN ${installCmd}\nCOPY . .\n`;
+
+          if (hasBuildScript) {
+            await updateLog('-> Phát hiện build script. Thêm bước RUN build biên dịch.');
+            dockerfileContent += `RUN ${buildCmd}\n`;
+          }
+
+          dockerfileContent += `RUN chmod -R 755 /app\nEXPOSE 3000\n`;
+
+          if (hasStartScript) {
+            dockerfileContent += `CMD [${startCmd.split(' ').map(s => `"${s}"`).join(', ')}]\n`;
+          } else {
+            const mainFile = packageJson.main || 'index.js';
+            dockerfileContent += `CMD ["node", "${mainFile}"]\n`;
+          }
+
+          fs.writeFileSync(path.join(tmpDir, 'Dockerfile'), dockerfileContent.trim());
         } else if (fs.existsSync(path.join(tmpDir, 'requirements.txt'))) {
           detectedLang = 'python';
           await updateLog('Phát hiện Python (requirements.txt). Đang tạo cấu hình Docker...');
@@ -926,20 +1041,21 @@ EXPOSE 80
         }
       });
       await updateLog('Build Image thành công!');
+      // Tag as latest as well
+      await this.dockerService.tagImage(imageName, `potato-app-${project.id}`, 'latest');
 
-      // Recreate container
-      if (project.containerId) {
-        await updateLog('Đang nhổ chậu cũ (xoá container cũ)...');
-        try {
-          await this.dockerService.removeContainer(project.containerId);
-        } catch (e: any) {
-          this.logger.warn(`Could not remove old container ${project.containerId}: ${e.message}`);
-        }
+      const hasOldContainer = !!project.containerId;
+      let newHostPort = hostPort;
+      let newContainerName = containerName;
+
+      if (hasOldContainer) {
+        newHostPort = await this.allocatePort();
+        newContainerName = `potato-${project.subdomain}-temp-${Date.now()}`;
       }
 
       await updateLog('Đang tạo chậu mới từ Image vừa build...');
       const finalEnvs = await this.prisma.envVariable.findMany({ where: { projectId: project.id } });
-      const envArray = finalEnvs.map(e => `${e.key}=${e.value}`);
+      const envArray = finalEnvs.map(e => `${e.key}=${e.isSecret ? decrypt(e.value) : e.value}`);
 
       let targetPort = '3000';
       if (detectedLang === 'php-laravel' || detectedLang === 'static-html') targetPort = '80';
@@ -959,17 +1075,49 @@ EXPOSE 80
       }
 
       const portBindings: any = {};
-      portBindings[`${targetPort}/tcp`] = [{ HostPort: String(hostPort) }];
+      portBindings[`${targetPort}/tcp`] = [{ HostPort: String(newHostPort) }];
       if (detectedLang === 'custom') {
-        portBindings['3000/tcp'] = [{ HostPort: String(hostPort) }];
-        portBindings['80/tcp'] = [{ HostPort: String(hostPort) }];
-        portBindings['8080/tcp'] = [{ HostPort: String(hostPort) }];
-        portBindings['8000/tcp'] = [{ HostPort: String(hostPort) }];
+        portBindings['3000/tcp'] = [{ HostPort: String(newHostPort) }];
+        portBindings['80/tcp'] = [{ HostPort: String(newHostPort) }];
+        portBindings['8080/tcp'] = [{ HostPort: String(newHostPort) }];
+        portBindings['8000/tcp'] = [{ HostPort: String(newHostPort) }];
+      }
+
+      // Setup Persistent Volume
+      const hostVolumeDir = path.resolve(path.join(process.cwd(), 'uploads', 'volumes', `project-${project.id}`));
+      fs.mkdirSync(hostVolumeDir, { recursive: true });
+      const containerVolumePath = project.volumeMapping || '/app/storage';
+
+      // Copy initial files to host volume directory if they exist in source and host volume is empty/doesn't have files
+      const relPath = containerVolumePath.startsWith('/app/') 
+        ? containerVolumePath.substring(5) 
+        : containerVolumePath.startsWith('/app')
+        ? containerVolumePath.substring(4)
+        : '';
+      
+      if (relPath) {
+        const srcVolumeDir = path.join(tmpDir, relPath);
+        if (fs.existsSync(srcVolumeDir)) {
+          const hostFiles = fs.readdirSync(hostVolumeDir);
+          const hasFramework = fs.existsSync(path.join(hostVolumeDir, 'framework'));
+          const isEmpty = hostFiles.length === 0 || 
+            (hostFiles.length === 1 && hostFiles[0] === 'logs') ||
+            !hasFramework;
+          
+          if (isEmpty) {
+            await updateLog(`Đang khởi tạo dữ liệu volume trên máy Host từ ${relPath}...`);
+            try {
+              fs.cpSync(srcVolumeDir, hostVolumeDir, { recursive: true });
+            } catch (err: any) {
+              this.logger.warn(`Could not initialize host volume directory: ${err.message}`);
+            }
+          }
+        }
       }
 
       const container = await this.dockerService.createContainer({
         Image: imageName,
-        name: containerName,
+        name: newContainerName,
         Env: envArray,
         ExposedPorts: { [`${targetPort}/tcp`]: {} },
         HostConfig: {
@@ -977,18 +1125,101 @@ EXPOSE 80
           MemorySwap: project.ramLimit * 1024 * 1024,
           NanoCPUs: Math.floor(project.cpuLimit * 1000000000),
           PortBindings: portBindings,
+          Binds: [`${hostVolumeDir}:${containerVolumePath}`],
           RestartPolicy: { Name: 'unless-stopped' },
         } as any,
       });
 
       await this.dockerService.startContainer(container.id);
-      
+
+      // ── Health Check (Zero-downtime) ──
+      await updateLog('Đang kiểm tra trạng thái hoạt động của container mới...');
+      let isHealthy = false;
+      const http = require('http');
+
+      for (let i = 0; i < 15; i++) {
+        const checkPromise = new Promise<boolean>((resolve) => {
+          const req = http.get(`http://localhost:${newHostPort}`, (res: any) => {
+            resolve(true); // Responded, port is open
+          });
+          req.on('error', () => {
+            resolve(false);
+          });
+          req.setTimeout(1000, () => {
+            req.destroy();
+            resolve(false);
+          });
+        });
+
+        const ok = await checkPromise;
+        if (ok) {
+          isHealthy = true;
+          break;
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      if (!isHealthy) {
+        await updateLog('CẢNH BÁO: Container mới khởi động thất bại hoặc không phản hồi trên cổng HTTP. Đang tiến hành rollback...');
+        try {
+          await this.dockerService.removeContainer(container.id);
+        } catch {}
+        throw new Error('Health check failed: Ứng dụng không phản hồi sau 15 giây khởi chạy.');
+      }
+
+      await updateLog('Container mới hoạt động ổn định! Đang thực hiện cutover traffic...');
+
+      // ── Cutover Traffic ──
+      this.nginxService.generateProxyConfig(
+        project.subdomain,
+        newHostPort,
+        project.name,
+        project.customDomain || undefined,
+        project.sslStatus === 'active'
+      );
+
+      if (hasOldContainer && project.containerId) {
+        await updateLog('Đang dọn dẹp phiên bản cũ...');
+        try {
+          await this.dockerService.removeContainer(project.containerId);
+        } catch (e: any) {
+          this.logger.warn(`Could not remove old container ${project.containerId}: ${e.message}`);
+        }
+
+        // Clean up old deployment images for this project to prevent disk bloating
+        try {
+          const images = await this.dockerService.listImages();
+          for (const img of images) {
+            if (img.RepoTags) {
+              for (const tag of img.RepoTags) {
+                // Find previous dep-X images for this project, except the current one we just built
+                if (tag.startsWith(`potato-app-${project.id}:dep-`) && !tag.endsWith(`:dep-${deploymentId}`)) {
+                  await this.dockerService.removeImage(tag);
+                  this.logger.log(`Cleaned up old build image: ${tag}`);
+                }
+              }
+            }
+          }
+          // Also prune dangling build layers (dangling: true)
+          await this.dockerService.pruneImages();
+        } catch (imgCleanupErr: any) {
+          this.logger.warn(`Failed to clean up old build images for project ${project.id}: ${imgCleanupErr.message}`);
+        }
+      }
+
+      if (hasOldContainer) {
+        try {
+          const dockerContainer = this.dockerService.getContainer(container.id);
+          await dockerContainer.rename({ name: containerName });
+        } catch (e: any) {
+          this.logger.warn(`Could not rename temp container ${container.id} to ${containerName}: ${e.message}`);
+        }
+      }
+
       await this.prisma.project.update({
         where: { id: project.id },
-        data: { containerId: container.id, status: 'running', hostPort },
+        data: { containerId: container.id, status: 'running', hostPort: newHostPort },
       });
-
-      this.nginxService.generateProxyConfig(project.subdomain, hostPort, project.name);
 
       const duration = Math.floor((Date.now() - startTime) / 1000);
 
@@ -1009,6 +1240,17 @@ EXPOSE 80
       });
 
       await updateLog(`Thu hoạch thành công sau ${duration}s! 🥔🚀`);
+
+      // Trigger Discord success alert if enabled
+      const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
+      if (projectData?.discordWebhook) {
+        this.sendDiscordAlert(
+          projectData.discordWebhook,
+          project.name,
+          'success',
+          `Phiên bản mới đã được cập nhật thành công!\n**Commit:** ${latestCommit?.hash?.substring(0, 7) || 'N/A'}\n**Nội dung:** ${latestCommit?.message || 'Manual deploy'}\n**Thời gian chạy:** ${duration}s`
+        );
+      }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       await updateLog(`LỖI: ${msg}`);
@@ -1023,6 +1265,17 @@ EXPOSE 80
         where: { id: project.id },
         data: { deployStatus: 'failed' },
       });
+
+      // Send Discord fail alert
+      const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
+      if (projectData?.discordWebhook) {
+        this.sendDiscordAlert(
+          projectData.discordWebhook,
+          project.name,
+          'failed',
+          `Quá trình triển khai gặp lỗi:\n\`\`\`\n${msg}\n\`\`\`\n**Thời gian chạy:** ${duration}s`
+        );
+      }
     } finally {
       // Cleanup tmp directory
       try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { }
@@ -1065,13 +1318,19 @@ EXPOSE 80
   private async allocatePort(): Promise<number> {
     const maxAttempts = 100;
 
-    // Collect all host ports currently bound by Docker containers
-    let usedPorts: Set<number>;
+    // 1. Lấy tất cả các cổng của dự án đã ghi nhận trong DB
+    const projects = await this.prisma.project.findMany({
+      select: { hostPort: true },
+    });
+    const dbPorts = projects.map(p => p.hostPort).filter(p => p !== null) as number[];
+
+    // 2. Lấy tất cả cổng Host đang bị chiếm dụng thực tế bởi Docker containers
+    let dockerPorts: Set<number>;
     try {
-      usedPorts = await this.dockerService.getUsedHostPorts();
+      dockerPorts = await this.dockerService.getUsedHostPorts();
     } catch {
       this.logger.warn('Could not inspect Docker ports, falling back to random allocation');
-      usedPorts = new Set();
+      dockerPorts = new Set();
     }
 
     for (let i = 0; i < maxAttempts; i++) {
@@ -1079,15 +1338,33 @@ EXPOSE 80
         Math.floor(Math.random() * (PORT_RANGE_MAX - PORT_RANGE_MIN + 1)) +
         PORT_RANGE_MIN;
 
-      if (!usedPorts.has(port)) {
-        this.logger.log(`Allocated port ${port} (${usedPorts.size} ports already in use)`);
-        return port;
+      // Check xem cổng có bị trùng trong DB, Docker hay OS vật lý không
+      if (!dbPorts.includes(port) && !dockerPorts.has(port)) {
+        const physicalFree = await this.isPortPhysicalFree(port);
+        if (physicalFree) {
+          this.logger.log(`Allocated port ${port} (${dockerPorts.size} docker ports in use)`);
+          return port;
+        }
       }
     }
 
     throw new InternalServerErrorException(
       'Failed to allocate a free port after maximum attempts',
     );
+  }
+
+  private isPortPhysicalFree(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const server = require('net').createServer();
+      server.once('error', () => {
+        resolve(false);
+      });
+      server.once('listening', () => {
+        server.close();
+        resolve(true);
+      });
+      server.listen(port);
+    });
   }
 
   // ─── Activity Logs ────────────────────────────────────────────────────
@@ -1163,5 +1440,396 @@ EXPOSE 80
     }
 
     return 'No logs found for this project.';
+  }
+
+  async updateSettings(id: number, volumeMapping?: string, discordWebhook?: string) {
+    await this.findProjectOrFail(id);
+    const data: any = {};
+    if (volumeMapping !== undefined) data.volumeMapping = volumeMapping;
+    if (discordWebhook !== undefined) data.discordWebhook = discordWebhook;
+
+    return this.prisma.project.update({
+      where: { id },
+      data,
+    });
+  }
+
+  private async sendDiscordAlert(webhookUrl: string, projectName: string, status: 'success' | 'failed', detailMessage: string) {
+    if (!webhookUrl) return;
+    try {
+      const http = require('https');
+      
+      const payload = {
+        username: 'Potato IDP Alert',
+        avatar_url: 'https://i.imgur.com/8QWv77v.png',
+        embeds: [{
+          title: status === 'success' ? `🚀 Triển khai thành công: ${projectName}` : `⚠️ Triển khai THẤT BẠI: ${projectName}`,
+          color: status === 'success' ? 3066993 : 15158332,
+          description: detailMessage,
+          timestamp: new Date().toISOString(),
+          footer: {
+            text: 'Potato Internal Developer Platform'
+          }
+        }]
+      };
+
+      const dataStr = JSON.stringify(payload);
+      const url = new URL(webhookUrl);
+      
+      const options = {
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': dataStr.length
+        }
+      };
+
+      const req = http.request(options);
+      req.on('error', (e: any) => {
+        this.logger.warn(`Failed to send Discord alert: ${e.message}`);
+      });
+      req.write(dataStr);
+      req.end();
+    } catch (err: any) {
+      this.logger.warn(`Error sending Discord alert: ${err.message}`);
+    }
+  }
+
+  async rollbackProject(projectId: number, deploymentId: number) {
+    const project = await this.findProjectOrFail(projectId);
+    const deployment = await this.prisma.deploymentLog.findFirst({
+      where: { id: deploymentId, projectId },
+    });
+    if (!deployment) {
+      throw new NotFoundException(`Không tìm thấy phiên bản deployment ID ${deploymentId} của dự án.`);
+    }
+
+    const rollbackImageName = `potato-app-${projectId}:dep-${deploymentId}`;
+
+    let imageExists = true;
+    try {
+      await this.dockerService.inspectImage(rollbackImageName);
+    } catch (err) {
+      imageExists = false;
+    }
+
+    if (!imageExists) {
+      if (!project.gitRepo) {
+        throw new BadRequestException('Không thể rollback vì không tìm thấy ảnh Docker cũ và không có mã nguồn Git để build lại.');
+      }
+      return this.deployFromGit(projectId, project.gitRepo, deployment.gitCommit || project.deployBranch || 'main', project.gitToken || undefined);
+    }
+
+    this.logger.log(`Performing rapid rollback for project ${projectId} to deployment ${deploymentId}`);
+
+    const newDeployment = await this.prisma.deploymentLog.create({
+      data: {
+        projectId,
+        trigger: 'rollback',
+        status: 'deploying',
+        gitCommit: deployment.gitCommit,
+        gitMessage: `Rollback về phiên bản #${deploymentId}: ${deployment.gitMessage || ''}`,
+      }
+    });
+
+    this.runRollbackBackground(project, newDeployment.id, rollbackImageName, deployment.gitCommit).catch(err => {
+      this.logger.error(`Rollback failed for project ${projectId}: ${err.message}`);
+    });
+
+    await this.logActivity(projectId, 'DEPLOY', `Yêu cầu rollback về phiên bản #${deploymentId} được kích hoạt`);
+    return { deploymentId: newDeployment.id, status: 'deploying', message: 'Rollback started in background' };
+  }
+
+  private async runRollbackBackground(
+    project: any,
+    deploymentId: number,
+    rollbackImageName: string,
+    gitCommit: string | null,
+  ) {
+    const startTime = Date.now();
+    let logBuffer = '';
+
+    const updateLog = async (msg: string) => {
+      this.logger.log(`[Rollback ${deploymentId}] ${msg}`);
+      logBuffer += `${new Date().toISOString()} ${msg}\n`;
+      await this.prisma.deploymentLog.update({
+        where: { id: deploymentId },
+        data: { log: logBuffer },
+      }).catch(() => { });
+    };
+
+    try {
+      await updateLog(`Bắt đầu rollback về phiên bản sử dụng ảnh ${rollbackImageName}...`);
+      
+      let hostPort = project.hostPort;
+      if (!hostPort) {
+        hostPort = await this.allocatePort();
+        await this.prisma.project.update({
+          where: { id: project.id },
+          data: { hostPort },
+        });
+        project.hostPort = hostPort;
+      }
+
+      const containerName = `potato-${project.subdomain}`;
+      const hasOldContainer = !!project.containerId;
+      let newHostPort = hostPort;
+      let newContainerName = containerName;
+
+      if (hasOldContainer) {
+        newHostPort = await this.allocatePort();
+        newContainerName = `potato-${project.subdomain}-temp-${Date.now()}`;
+      }
+
+      await updateLog('Đang chuẩn bị biến môi trường...');
+      const finalEnvs = await this.prisma.envVariable.findMany({ where: { projectId: project.id } });
+      const envArray = finalEnvs.map(e => `${e.key}=${e.isSecret ? decrypt(e.value) : e.value}`);
+
+      let targetPort = '3000';
+      try {
+        const imageInfo = await this.dockerService.inspectImage(rollbackImageName);
+        if (imageInfo.Config?.ExposedPorts) {
+          const ports = Object.keys(imageInfo.Config.ExposedPorts);
+          if (ports.length > 0) {
+            targetPort = ports[0].split('/')[0];
+          }
+        }
+      } catch (e) {
+        this.logger.warn(`Failed to inspect rollback image: ${e}`);
+      }
+
+      const portBindings: any = {};
+      portBindings[`${targetPort}/tcp`] = [{ HostPort: String(newHostPort) }];
+      portBindings['3000/tcp'] = [{ HostPort: String(newHostPort) }];
+      portBindings['80/tcp'] = [{ HostPort: String(newHostPort) }];
+
+      const hostVolumeDir = path.resolve(path.join(process.cwd(), 'uploads', 'volumes', `project-${project.id}`));
+      fs.mkdirSync(hostVolumeDir, { recursive: true });
+      const containerVolumePath = project.volumeMapping || '/app/storage';
+
+      await updateLog(`Đang khởi tạo container từ ảnh rollback: ${rollbackImageName}...`);
+      const container = await this.dockerService.createContainer({
+        Image: rollbackImageName,
+        name: newContainerName,
+        Env: envArray,
+        ExposedPorts: { [`${targetPort}/tcp`]: {} },
+        HostConfig: {
+          Memory: project.ramLimit * 1024 * 1024,
+          MemorySwap: project.ramLimit * 1024 * 1024,
+          NanoCPUs: Math.floor(project.cpuLimit * 1000000000),
+          PortBindings: portBindings,
+          Binds: [`${hostVolumeDir}:${containerVolumePath}`],
+          RestartPolicy: { Name: 'unless-stopped' },
+        } as any,
+      });
+
+      await this.dockerService.startContainer(container.id);
+      await updateLog('Đang kiểm tra trạng thái hoạt động của container mới...');
+
+      let isHealthy = false;
+      const http = require('http');
+
+      for (let i = 0; i < 15; i++) {
+        const checkPromise = new Promise<boolean>((resolve) => {
+          const req = http.get(`http://localhost:${newHostPort}`, (res: any) => {
+            resolve(true);
+          });
+          req.on('error', () => {
+            resolve(false);
+          });
+          req.setTimeout(1000, () => {
+            req.destroy();
+            resolve(false);
+          });
+        });
+
+        const ok = await checkPromise;
+        if (ok) {
+          isHealthy = true;
+          break;
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      if (!isHealthy) {
+        await updateLog('❌ Rollback thất bại: Container mới không phản hồi HTTP. Tiến hành hủy rollback.');
+        await this.dockerService.removeContainer(container.id);
+        throw new Error('Health check failed: Ứng dụng không phản hồi sau 15 giây khởi chạy.');
+      }
+
+      await updateLog('Container hoạt động ổn định! Đang thực hiện cutover traffic...');
+      
+      this.nginxService.generateProxyConfig(
+        project.subdomain,
+        newHostPort,
+        project.name,
+        project.customDomain || undefined,
+        project.sslStatus === 'active'
+      );
+      await updateLog('Đã cập nhật định tuyến Nginx Proxy.');
+
+      if (hasOldContainer) {
+        await updateLog('Đang dọn dẹp phiên bản cũ...');
+        try {
+          await this.dockerService.stopContainer(project.containerId);
+          await this.dockerService.removeContainer(project.containerId);
+        } catch (err: any) {
+          this.logger.warn(`Failed to clean up old container: ${err.message}`);
+        }
+      }
+
+      try {
+        await this.dockerService.getContainer(container.id).rename({ name: containerName });
+      } catch (err: any) {
+        this.logger.warn(`Failed to rename container: ${err.message}`);
+      }
+
+      await this.prisma.project.update({
+        where: { id: project.id },
+        data: {
+          containerId: container.id,
+          status: 'running',
+          hostPort: newHostPort,
+        },
+      });
+
+      try {
+        await this.dockerService.tagImage(rollbackImageName, `potato-app-${project.id}`, 'latest');
+      } catch (err: any) {
+        this.logger.warn(`Failed to update latest tag: ${err.message}`);
+      }
+
+      const duration = Math.round((Date.now() - startTime) / 1000);
+      await this.prisma.deploymentLog.update({
+        where: { id: deploymentId },
+        data: {
+          status: 'success',
+          duration,
+          log: logBuffer + `${new Date().toISOString()} Hoàn tất rollback thành công! 🥔🚀\n`,
+        },
+      });
+
+      await this.prisma.project.update({
+        where: { id: project.id },
+        data: { deployStatus: 'success', lastDeployedAt: new Date() },
+      });
+
+      await this.logActivity(project.id, 'DEPLOY', `Rollback về phiên bản #${gitCommit?.substring(0, 7) || ''} thành công.`);
+      
+      const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
+      if (projectData?.discordWebhook) {
+        this.sendDiscordAlert(
+          projectData.discordWebhook,
+          project.name,
+          'success',
+          `Đã quay lui (rollback) về phiên bản thành công!\n**Commit:** ${gitCommit?.substring(0, 7) || 'N/A'}\n**Thời gian chạy:** ${duration}s`
+        );
+      }
+
+    } catch (err: any) {
+      const duration = Math.round((Date.now() - startTime) / 1000);
+      await updateLog(`❌ Lỗi rollback: ${err.message}`);
+      await this.prisma.deploymentLog.update({
+        where: { id: deploymentId },
+        data: { status: 'failed', duration },
+      });
+
+      await this.prisma.project.update({
+        where: { id: project.id },
+        data: { deployStatus: 'failed' },
+      });
+
+      await this.logActivity(project.id, 'DEPLOY', `Rollback thất bại: ${err.message}`);
+
+      const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
+      if (projectData?.discordWebhook) {
+        this.sendDiscordAlert(
+          projectData.discordWebhook,
+          project.name,
+          'failed',
+          `Quá trình quay lui (rollback) gặp lỗi:\n\`\`\`\n${err.message}\n\`\`\`\n**Thời gian chạy:** ${duration}s`
+        );
+      }
+    }
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async monitorContainersHealth() {
+    this.logger.log('🔍 Checking health of all running project containers...');
+    const runningProjects = await this.prisma.project.findMany({
+      where: { status: 'running', containerId: { not: null } },
+    });
+
+    for (const project of runningProjects) {
+      try {
+        const containerState = await this.dockerService.getContainerState(project.containerId!);
+        if (!containerState.running) {
+          this.logger.warn(`Container for project "${project.name}" (${project.id}) is not running! State: ${containerState.status}`);
+          
+          const shouldRestart = project.restartPolicy === 'always' || 
+            (project.restartPolicy === 'on-failure' && containerState.exitCode !== 0);
+
+          if (shouldRestart) {
+            this.logger.log(`🔄 Attempting auto-restart of project "${project.name}"...`);
+            await this.prisma.activityLog.create({
+              data: {
+                projectId: project.id,
+                type: 'START',
+                message: `Container dừng đột ngột (Exit Code: ${containerState.exitCode}). Đang tự động khởi động lại...`
+              }
+            });
+
+            try {
+              await this.dockerService.startContainer(project.containerId!);
+              
+              if (project.discordWebhook) {
+                await this.sendDiscordAlert(
+                  project.discordWebhook,
+                  project.name,
+                  'success',
+                  `⚠️ **Cảnh báo:** Container bị tắt đột ngột (Exit Code: ${containerState.exitCode}).\n🔄 **Hành động:** Đã kích hoạt cơ chế tự động khởi động lại (Restart Policy: ${project.restartPolicy}) thành công.`
+                );
+              }
+            } catch (restartErr: any) {
+              this.logger.error(`Failed to auto-restart project ${project.id}: ${restartErr.message}`);
+              if (project.discordWebhook) {
+                await this.sendDiscordAlert(
+                  project.discordWebhook,
+                  project.name,
+                  'failed',
+                  `🚨 **Cảnh báo:** Container bị tắt đột ngột (Exit Code: ${containerState.exitCode}).\n❌ **Hành động:** Thử tự động khởi động lại thất bại: ${restartErr.message}`
+                );
+              }
+            }
+          } else {
+            await this.prisma.project.update({
+              where: { id: project.id },
+              data: { status: 'stopped' },
+            });
+
+            await this.prisma.activityLog.create({
+              data: {
+                projectId: project.id,
+                type: 'STOP',
+                message: `Container dừng đột ngột (Exit Code: ${containerState.exitCode}).`
+              }
+            });
+
+            if (project.discordWebhook) {
+              await this.sendDiscordAlert(
+                project.discordWebhook,
+                project.name,
+                'failed',
+                `🚨 **Cảnh báo:** Container bị tắt đột ngột (Exit Code: ${containerState.exitCode}). Không cấu hình tự khởi động lại.`
+              );
+            }
+          }
+        }
+      } catch (err: any) {
+        this.logger.error(`Error monitoring health of project ${project.id}: ${err.message}`);
+      }
+    }
   }
 }

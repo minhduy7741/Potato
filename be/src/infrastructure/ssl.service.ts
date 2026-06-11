@@ -4,7 +4,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NginxService } from './nginx.service';
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 @Injectable()
 export class SslService {
@@ -91,10 +94,10 @@ export class SslService {
       // Generate self-signed cert using openssl
       // Note: On Windows, openssl must be in PATH
       const cmd = `openssl req -x509 -newkey rsa:4096 -keyout "${keyPath}" -out "${certPath}" -sha256 -days 365 -nodes -subj "/CN=${domain}"`;
-      execSync(cmd, { stdio: 'ignore' });
+      await execAsync(cmd);
       
       this.logger.log(`✅ Certificate generated at: ${certPath}`);
-    } catch (err) {
+    } catch (err: any) {
       this.logger.warn(`⚠️ OpenSSL failed or not found. Falling back to mock paths. Error: ${err.message}`);
     }
 

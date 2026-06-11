@@ -1,0 +1,20 @@
+# Potato Project Agent Rules
+
+## Chỉ thị chung
+- Bạn đang làm việc trên dự án Potato (IDP Platform). 
+- Trước khi thực hiện thay đổi lớn hoặc thêm tính năng mới, bạn BẮT BUỘC phải đọc bản đồ dự án tại [PROJECT_MAP.md](file:///C:/Users/minhd/OneDrive/Desktop/Potato/PROJECT_MAP.md) để hiểu cấu trúc và các luồng nghiệp vụ hiện có.
+
+## Quy chuẩn Backend (NestJS + Prisma)
+- Viết mã sạch, tuân thủ mô hình Module-Service-Controller và Dependency Injection của NestJS.
+- Luôn bắt lỗi (exception handling) cẩn thận, không làm crash Docker container của backend.
+- Cổng chạy local mặc định: 3000.
+
+## Quy chuẩn Frontend (Next.js 16 + TailwindCSS 4)
+- Viết component React theo chuẩn App Router (`fe/app`).
+- Đánh dấu `'use client'` cho các component cần sử dụng state hoặc trigger sự kiện phía trình duyệt.
+- Sử dụng TailwindCSS 4 để định dạng giao diện nhất quán.
+- Cổng chạy local mặc định: 3001.
+
+## Quy tắc chỉnh sửa code
+- KHÔNG tự ý xóa comment, tài liệu hướng dẫn hoặc thay đổi các cơ chế cốt lõi như Zero-downtime, Auto-heal trừ khi có yêu cầu cụ thể.
+- Khi tạo thêm hoặc sửa đổi lớn cấu trúc thư mục, DB schema hay luồng nghiệp vụ, hãy cập nhật lại file [PROJECT_MAP.md](file:///C:/Users/minhd/OneDrive/Desktop/Potato/PROJECT_MAP.md).

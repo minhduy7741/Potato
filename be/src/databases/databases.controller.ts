@@ -68,4 +68,44 @@ export class DatabasesController {
       }
     });
   }
+
+  @Post(':id/backups')
+  async createBackup(@Param('id', ParseIntPipe) id: number) {
+    const filename = await this.databasesService.createBackup(id);
+    return { success: true, filename };
+  }
+
+  @Get(':id/backups')
+  async listBackups(@Param('id', ParseIntPipe) id: number) {
+    return this.databasesService.listBackups(id);
+  }
+
+  @Get(':id/backups/:filename')
+  async downloadBackup(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    const filePath = await this.databasesService.getBackupFilePath(id, filename);
+    res.download(filePath, filename);
+  }
+
+  @Post(':id/backups/:filename/restore')
+  async restoreBackup(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('filename') filename: string,
+  ) {
+    return this.databasesService.restoreFromBackup(id, filename);
+  }
+
+  @Post(':id/query')
+  runQuery(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('query') query: string,
+  ) {
+    if (!query || query.trim() === '') {
+      throw new ConflictException('Vui lòng điền câu lệnh SQL');
+    }
+    return this.databasesService.runQuery(id, query);
+  }
 }

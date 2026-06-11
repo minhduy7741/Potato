@@ -6,13 +6,10 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-import { ProjectsService } from '../projects/projects.service';
-
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly projectsService: ProjectsService,
   ) {}
 
   /** POST /api/auth/register — Creates a new account and returns a JWT token */
@@ -65,6 +62,6 @@ export class AuthController {
   @Delete('me')
   @UseGuards(JwtAuthGuard)
   async deleteAccount(@Request() req: any) {
-    return this.authService.removeAccount(req.user.id, this.projectsService);
+    return this.authService.removeAccount(req.user.id);
   }
 }

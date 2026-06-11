@@ -117,6 +117,16 @@ export class ProjectsController {
     return this.projectsService.updateCustomDomain(id, customDomain);
   }
 
+  @Patch(':id/settings')
+  async updateSettings(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('volumeMapping') volumeMapping?: string,
+    @Body('discordWebhook') discordWebhook?: string,
+  ) {
+    this.logger.log(`PATCH /projects/${id}/settings — Volume=${volumeMapping}, Webhook=${discordWebhook}`);
+    return this.projectsService.updateSettings(id, volumeMapping, discordWebhook);
+  }
+
   @Post(':id/clone')
   async clone(@Param('id', ParseIntPipe) id: number) {
     this.logger.log(`POST /projects/${id}/clone`);
@@ -206,5 +216,14 @@ export class ProjectsController {
   @Get(':id/deployments')
   async getDeployments(@Param('id', ParseIntPipe) id: number) {
     return this.projectsService.getDeployments(id);
+  }
+
+  @Post(':id/rollback/:deploymentId')
+  async rollback(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('deploymentId', ParseIntPipe) deploymentId: number,
+  ) {
+    this.logger.log(`POST /projects/${id}/rollback/${deploymentId} — Triggering rollback`);
+    return this.projectsService.rollbackProject(id, deploymentId);
   }
 }

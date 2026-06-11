@@ -108,6 +108,34 @@ export class DockerService {
     return image.inspect();
   }
 
+  /**
+   * Removes a Docker image from the host system.
+   */
+  async removeImage(imageName: string): Promise<void> {
+    this.logger.log(`Removing image: ${imageName}...`);
+    try {
+      const image = this.docker.getImage(imageName);
+      await image.remove({ force: true });
+      this.logger.log(`Successfully removed image: ${imageName}`);
+    } catch (err: any) {
+      this.logger.warn(`Failed to remove image ${imageName}: ${err.message}`);
+    }
+  }
+
+  /**
+   * Tags an existing image with a new name and tag.
+   */
+  async tagImage(srcImage: string, repo: string, tag: string): Promise<void> {
+    this.logger.log(`Tagging image ${srcImage} as ${repo}:${tag}...`);
+    try {
+      const image = this.docker.getImage(srcImage);
+      await image.tag({ repo, tag });
+    } catch (err: any) {
+      this.logger.error(`Failed to tag image ${srcImage}: ${err.message}`);
+      throw err;
+    }
+  }
+
   // ─── Container Lifecycle ─────────────────────────────────────────────
 
   /**
@@ -186,12 +214,13 @@ export class DockerService {
    */
   async getContainerState(
     containerId: string,
-  ): Promise<{ status: string; running: boolean }> {
+  ): Promise<{ status: string; running: boolean; exitCode: number }> {
     const container = this.docker.getContainer(containerId);
     const info = await container.inspect();
     return {
       status: info.State.Status,
       running: info.State.Running,
+      exitCode: info.State.ExitCode,
     };
   }
 
@@ -327,5 +356,19 @@ export class DockerService {
       Memory: resources.ramMB * 1024 * 1024,
       MemorySwap: resources.ramMB * 1024 * 1024,
     });
+  }
+
+  /**
+   * Lists all images on the host system.
+   */
+  async listImages(): Promise<Dockerode.ImageInfo[]> {
+    return this.docker.listImages();
+  }
+
+  /**
+   * Prunes dangling images on the host system.
+   */
+  async pruneImages(): Promise<any> {
+    return this.docker.pruneImages();
   }
 }

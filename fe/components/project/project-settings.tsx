@@ -45,6 +45,11 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Advanced settings state
+  const [volumeMapping, setVolumeMapping] = useState(project.volumeMapping || "/app/storage")
+  const [discordWebhook, setDiscordWebhook] = useState(project.discordWebhook || "")
+  const [isSavingSettings, setIsSavingSettings] = useState(false)
+
   // Custom domain state
   const [customDomain, setCustomDomain] = useState(project.customDomain || "")
   const [isEditingDomain, setIsEditingDomain] = useState(false)
@@ -168,6 +173,22 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
     }
   }
 
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true)
+    try {
+      await apiFetch(`/projects/${project.id}/settings`, {
+        method: "PATCH",
+        body: JSON.stringify({ volumeMapping, discordWebhook }),
+      })
+      toast.success("Cấu hình nâng cao đã được cập nhật thành công! 🥔")
+      onUpdate?.()
+    } catch (error: any) {
+      toast.error(error.message || "Không thể lưu cấu hình nâng cao")
+    } finally {
+      setIsSavingSettings(false)
+    }
+  }
+
   const isSslActive = project.sslStatus === 'active' || project.sslStatus === 'expiring_soon'
   const isExpiring = project.sslStatus === 'expiring_soon'
 
@@ -244,6 +265,61 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
             >
               {isSavingGeneral ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save Changes
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Advanced Settings */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.08 }}
+      >
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle className="text-lg">Advanced Settings</CardTitle>
+                <CardDescription>Cấu hình nâng cao cho dự án của bạn</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="volumeMapping">Persistent Volume Path</Label>
+              <Input
+                id="volumeMapping"
+                placeholder="/app/storage"
+                value={volumeMapping}
+                onChange={(e) => setVolumeMapping(e.target.value)}
+                className="bg-muted border-border font-mono text-sm"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Thư mục này của container sẽ được ánh xạ ra máy Host để không bị mất dữ liệu khi redeploy. Mặc định là <code className="bg-muted px-1 rounded text-primary">/app/storage</code>.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="discordWebhook">Discord Alert Webhook</Label>
+              <Input
+                id="discordWebhook"
+                placeholder="https://discord.com/api/webhooks/..."
+                value={discordWebhook}
+                onChange={(e) => setDiscordWebhook(e.target.value)}
+                className="bg-muted border-border text-sm"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Nhập Discord Webhook URL để nhận thông báo tức thời khi triển khai thành công hoặc thất bại.
+              </p>
+            </div>
+            <Button
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-2"
+              onClick={handleSaveSettings}
+              disabled={isSavingSettings}
+            >
+              {isSavingSettings ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Lưu cấu hình nâng cao
             </Button>
           </CardContent>
         </Card>

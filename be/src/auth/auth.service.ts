@@ -1,16 +1,19 @@
-import { Injectable, ConflictException, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
+import { ProjectsService } from '../projects/projects.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    @Inject(forwardRef(() => ProjectsService))
+    private projectsService: ProjectsService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────
@@ -107,7 +110,7 @@ export class AuthService {
     return result;
   }
 
-  async removeAccount(userId: number, projectsService: any) {
+  async removeAccount(userId: number) {
     // 1. Find all projects belonging to this user
     const projects = await this.prisma.project.findMany({
       where: { userId },
@@ -115,7 +118,7 @@ export class AuthService {
 
     // 2. Delete each project (this handles database and container cleanup)
     for (const project of projects) {
-      await projectsService.deleteProject(project.id);
+      await this.projectsService.deleteProject(project.id);
     }
 
     // 3. Delete the user record

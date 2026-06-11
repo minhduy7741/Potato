@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { DockerService } from '../docker/docker.service';
+import { StatsGateway } from './stats.gateway';
 
 @Injectable()
 export class StatsCollectorService {
@@ -10,6 +11,8 @@ export class StatsCollectorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly dockerService: DockerService,
+    @Inject(forwardRef(() => StatsGateway))
+    private readonly statsGateway: StatsGateway,
   ) {}
 
   /**
@@ -74,6 +77,34 @@ export class StatsCollectorService {
                 }
               });
             }
+          } else if (projectData?.autoScale && stats.cpuPercent < 15) {
+            const newRam = Math.max(projectData.ramLimit - 256, 256);
+            const newCpu = Math.max(projectData.cpuLimit - 0.5, 1.0);
+
+            if (newRam < projectData.ramLimit || newCpu < projectData.cpuLimit) {
+              this.logger.log(`📉 Auto-scaling down project "${projectData.name}" (${project.id}) due to low CPU (${stats.cpuPercent.toFixed(1)}%)`);
+              
+              // Update DB
+              await this.prisma.project.update({
+                where: { id: project.id },
+                data: { ramLimit: newRam, cpuLimit: newCpu }
+              });
+
+              // Update Container Live
+              await this.dockerService.updateContainerResources(project.containerId!, {
+                ramMB: newRam,
+                cpuCores: newCpu
+              });
+
+              // Log activity
+              await this.prisma.activityLog.create({
+                data: {
+                  projectId: project.id,
+                  type: 'AUTO_SCALE',
+                  message: `Hệ thống tự động thu hồi tài nguyên do tải CPU thấp (${stats.cpuPercent.toFixed(1)}%). Mức mới: ${newRam}MB RAM, ${newCpu} CPU.`
+                }
+              });
+            }
           }
         } catch (err) {
           this.logger.warn(`Failed to collect stats or scale project ${project.id}: ${err.message}`);
@@ -109,5 +140,53 @@ export class StatsCollectorService {
       orderBy: { createdAt: 'asc' },
       select: { cpuUsage: true, ramUsage: true, createdAt: true },
     });
+  }
+
+  /**
+   * Runs every 3 seconds: query Docker stats ONLY for running projects that have
+   * active WebSocket subscribers in their stats rooms, and broadcast to those rooms.
+   */
+  @Cron('*/3 * * * * *')
+  async broadcastRealtimeStats() {
+    const server = this.statsGateway.server;
+    if (!server) return;
+
+    const runningProjects = await this.prisma.project.findMany({
+      where: { status: 'running', containerId: { not: null } },
+      select: { id: true, containerId: true },
+    });
+
+    for (const project of runningProjects) {
+      const roomName = `project-stats:${project.id}`;
+      const room = (server as any).adapter.rooms.get(roomName);
+      const numSubscribers = room ? room.size : 0;
+
+      if (numSubscribers > 0) {
+        try {
+          const stats = await this.dockerService.getContainerStats(project.containerId!);
+          server.to(roomName).emit('stats_update', {
+            projectId: project.id,
+            state: 'running',
+            running: true,
+            cpu: { usagePercent: stats.cpuPercent },
+            memory: {
+              usagePercent: stats.memoryPercent,
+              usageMB: stats.memoryUsageMB,
+              limitMB: stats.memoryLimitMB,
+            },
+          });
+        } catch (error: any) {
+          if (error.message?.includes('no container')) {
+            server.to(roomName).emit('stats_update', {
+              cpu: { usagePercent: 0 },
+              memory: { usagePercent: 0, usageMb: 0, limitMb: 0 },
+            });
+          } else {
+            this.logger.warn(`Failed to broadcast stats for project ${project.id}: ${error.message}`);
+            server.to(roomName).emit('stats_error', { message: 'Không thể lấy thông số dự án' });
+          }
+        }
+      }
+    }
   }
 }

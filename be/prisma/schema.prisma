@@ -45,6 +45,8 @@ model Project {
   restartPolicy       String             @default("on-failure") // no, on-failure, always
   autoScale           Boolean            @default(false)
   notificationsEnabled Boolean           @default(true)
+  volumeMapping       String?            @default("/app/storage")
+  discordWebhook      String?
   userId              Int
   user           User               @relation(fields: [userId], references: [id])
   databases      DatabaseInstance[]
@@ -94,6 +96,9 @@ model ProjectStat {
   cpuUsage   Float    // percentage 0-100
   ramUsage   Float    // MB
   createdAt  DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([createdAt])
 }
 
 model DatabaseInstance {

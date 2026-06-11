@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { GitBranch, Upload, CheckCircle, XCircle, Clock, Loader2, ExternalLink, RefreshCw } from "lucide-react"
+import { GitBranch, Upload, CheckCircle, XCircle, Clock, Loader2, ExternalLink, RefreshCw, RotateCcw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -68,6 +68,20 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
     } catch (err: any) {
       toast.error(err.message)
       setIsDeploying(false)
+    }
+  }
+
+  const handleRollback = async (deploymentId: number) => {
+    try {
+      toast.loading("Đang thực hiện rollback...", { id: "rollback-project" })
+      await apiFetch(`/projects/${project.id}/rollback/${deploymentId}`, {
+        method: "POST"
+      })
+      toast.success("Đã kích hoạt rollback thành công! 🚀", { id: "rollback-project" })
+      onUpdate()
+      fetchDeployments()
+    } catch (err: any) {
+      toast.error(err.message, { id: "rollback-project" })
     }
   }
 
@@ -227,7 +241,18 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {deployment.status === "success" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 text-[10px] px-2 border-primary/30 text-primary hover:bg-primary/10"
+                            onClick={() => handleRollback(deployment.id)}
+                          >
+                            <RotateCcw className="mr-1 h-3 w-3" />
+                            Rollback
+                          </Button>
+                        )}
                         <Badge className={`text-[9px] px-1.5 py-0 ${getStatusClass(deployment.status)}`}>
                           {deployment.status.toUpperCase()}
                         </Badge>

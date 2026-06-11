@@ -30,7 +30,7 @@ export function DashboardHeader() {
   const [isSearching, setIsSearching] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
-  const searchTimeout = useRef<NodeJS.Timeout>()
+  const searchTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // ── Notifications ───────────────────────────────────────────────────
   const [notifications, setNotifications] = useState<any[]>([])

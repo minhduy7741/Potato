@@ -1,0 +1,18 @@
+# Dependency directories
+node_modules/
+
+# Build directories
+be/dist/
+fe/.next/
+*.tsbuildinfo
+
+# Uploads and temporary data
+be/uploads/
+be/scratch/
+
+# Dynamic configurations
+be/nginx_configs/
+
+# OS files
+.DS_Store
+Thumbs.db

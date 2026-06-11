@@ -16,7 +16,6 @@ import { Logger } from '@nestjs/common';
 })
 export class StatsGateway implements OnGatewayDisconnect {
   private readonly logger = new Logger(StatsGateway.name);
-  private activeIntervals = new Map<string, NodeJS.Timeout>();
 
   @WebSocketServer()
   server: Server;
@@ -24,7 +23,7 @@ export class StatsGateway implements OnGatewayDisconnect {
   constructor(private readonly projectsService: ProjectsService) {}
 
   handleDisconnect(client: Socket) {
-    this.stopStats(client.id);
+    this.logger.log(`Client ${client.id} disconnected from stats gateway`);
   }
 
   @SubscribeMessage('watch_stats')
@@ -32,50 +31,39 @@ export class StatsGateway implements OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { projectId: number },
   ) {
-    this.stopStats(client.id);
+    // Leave previous project stats rooms
+    for (const room of client.rooms) {
+      if (room.startsWith('project-stats:')) {
+        client.leave(room);
+      }
+    }
 
-    this.logger.log(`Client ${client.id} watching stats for project ${data.projectId}`);
+    this.logger.log(`Client ${client.id} joined stats room for project ${data.projectId}`);
+    client.join(`project-stats:${data.projectId}`);
 
-    // Gửi stats ngay lập tức lần đầu
-    await this.sendStats(client, data.projectId);
-
-    // Thiết lập interval mỗi 2 giây
-    const interval = setInterval(async () => {
-      await this.sendStats(client, data.projectId);
-    }, 2000);
-
-    this.activeIntervals.set(client.id, interval);
-  }
-
-  @SubscribeMessage('unwatch_stats')
-  handleUnwatchStats(@ConnectedSocket() client: Socket) {
-    this.stopStats(client.id);
-  }
-
-  private async sendStats(client: Socket, projectId: number) {
+    // Send initial stats immediately
     try {
-      const stats = await this.projectsService.getProjectStats(projectId);
+      const stats = await this.projectsService.getProjectStats(data.projectId);
       client.emit('stats_update', stats);
-    } catch (error) {
-      // Project không có container (ví dụ: seed data hoặc stopped) → emit zeros
-      // thay vì báo lỗi liên tục và dừng interval
+    } catch (error: any) {
       if (error.message?.includes('no container')) {
         client.emit('stats_update', {
           cpu: { usagePercent: 0 },
           memory: { usagePercent: 0, usageMb: 0, limitMb: 0 },
         });
       } else {
-        this.logger.warn(`Stats unavailable for project ${projectId}: ${error.message}`);
         client.emit('stats_error', { message: 'Không thể lấy thông số dự án' });
-        this.stopStats(client.id);
       }
     }
   }
 
-  private stopStats(clientId: string) {
-    if (this.activeIntervals.has(clientId)) {
-      clearInterval(this.activeIntervals.get(clientId));
-      this.activeIntervals.delete(clientId);
+  @SubscribeMessage('unwatch_stats')
+  handleUnwatchStats(@ConnectedSocket() client: Socket) {
+    for (const room of client.rooms) {
+      if (room.startsWith('project-stats:')) {
+        client.leave(room);
+        this.logger.log(`Client ${client.id} left stats room: ${room}`);
+      }
     }
   }
 }
