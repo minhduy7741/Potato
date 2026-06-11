@@ -278,6 +278,18 @@ export class DatabasesService {
       // Continue with DB deletion even if container cleanup fails
     }
 
+    // Xóa các biến môi trường kết nối cơ sở dữ liệu tương ứng trong dự án
+    if (db.projectId) {
+      const dbEnvs = ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'];
+      await this.prisma.envVariable.deleteMany({
+        where: {
+          projectId: db.projectId,
+          key: { in: dbEnvs },
+        },
+      });
+      this.logger.log(`Deleted database environment variables for project ${db.projectId}`);
+    }
+
     await this.prisma.databaseInstance.delete({ where: { id } });
     this.logger.log(`Database record ${id} deleted`);
     return { success: true };
