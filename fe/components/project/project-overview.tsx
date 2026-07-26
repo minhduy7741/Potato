@@ -110,7 +110,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
       >
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-lg">Plot Information</CardTitle>
+            <CardTitle className="text-lg">Thông tin Dự án</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <InfoRow
@@ -131,22 +131,22 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             )}
             <InfoRow
               icon={<GitBranch className="h-4 w-4" />}
-              label="Sprout ID"
+              label="ID Dự án"
               value={project.id.toString()}
             />
             <InfoRow
               icon={<Clock className="h-4 w-4" />}
-              label="Planted At"
+              label="Thời gian tạo"
               value={new Date(project.createdAt).toLocaleString()}
             />
             <InfoRow
               icon={<Shield className="h-4 w-4" />}
-              label="Tuber Security"
-              value="Internal Only"
+              label="Bảo mật"
+              value="Nội bộ (Internal)"
             />
             <InfoRow
               icon={<Database className="h-4 w-4" />}
-              label="Farm Region"
+              label="Môi trường chạy"
               value="Local Docker"
             />
           </CardContent>
@@ -164,7 +164,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Database className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Connected Sprouts</CardTitle>
+              <CardTitle className="text-lg">Cơ sở dữ liệu đã kết nối</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
@@ -207,18 +207,18 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
         <Card className="border-border bg-card">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Health Status</CardTitle>
+              <CardTitle className="text-lg">Trạng thái Hoạt động</CardTitle>
               <Badge className={project.status === "running" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-muted text-muted-foreground border-border"}>
-                {project.status === "running" ? "Healthy" : project.status === "sprouting" ? "Provisioning" : "Hibernating"}
+                {project.status === "running" ? "Đang chạy" : project.status === "sprouting" ? "Đang khởi tạo" : "Đang tạm dừng"}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-4">
               {[
-                { label: "Container Runner", status: project.status === "running" ? "operational" : "stopped", latency: project.status === "running" ? "stable" : "N/A" },
-                { label: "Internal Sprout API", status: "operational", latency: "active" },
-                { label: "Root File System", status: "operational", latency: "mounted" },
+                { label: "Trình chạy Container (Runner)", status: project.status === "running" ? "đang hoạt động" : "đã dừng", latency: project.status === "running" ? "ổn định" : "N/A" },
+                { label: "Internal Sprout API", status: "đang hoạt động", latency: "ổn định" },
+                { label: "Phân vùng lưu trữ (Root File System)", status: "đang hoạt động", latency: "đã mount" },
               ].map((service, index) => (
                 <div key={index} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                   <div className="flex items-center gap-3">
@@ -249,7 +249,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Recent Plot Activity</CardTitle>
+              <CardTitle className="text-lg">Lịch sử Triển khai</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
@@ -264,13 +264,13 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
                   <div className="flex items-center gap-3">
                     <div className="h-2 w-2 rounded-full bg-emerald-400" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Project Planted</p>
+                      <p className="text-sm font-medium text-foreground">Khởi tạo Dự án</p>
                       <p className="text-xs text-muted-foreground">
-                        Initial plot created · {new Date(project.createdAt).toLocaleDateString()}
+                        Khởi tạo dự án ban đầu · {new Date(project.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-500/30">Done</Badge>
+                  <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-500/30">Xong</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-4 italic">Chưa có lần deploy nào. Git Deploy để bắt đầu!</p>
               </div>
@@ -281,13 +281,13 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
                   <div className="flex items-center gap-3">
                     <div className="h-2 w-2 rounded-full bg-emerald-400" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Project Planted</p>
+                      <p className="text-sm font-medium text-foreground">Khởi tạo Dự án</p>
                       <p className="text-xs text-muted-foreground">
-                        Initial plot created · {new Date(project.createdAt).toLocaleDateString()}
+                        Khởi tạo dự án ban đầu · {new Date(project.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-500/30">Done</Badge>
+                  <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-500/30">Xong</Badge>
                 </div>
                 {deployments.slice(0, 5).map((dep: any) => (
                   <div key={dep.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
@@ -347,7 +347,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
           <CardHeader className="border-b border-border/50 bg-muted/20">
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Recent Activity</CardTitle>
+              <CardTitle className="text-lg">Hoạt động Gần đây</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -358,7 +358,7 @@ export function ProjectOverview({ project }: ProjectOverviewProps) {
             ) : activities.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                 <Activity className="h-10 w-10 mb-2 opacity-20" />
-                <p className="text-sm">No activity recorded yet.</p>
+                <p className="text-sm">Chưa ghi nhận hoạt động nào.</p>
               </div>
             ) : (
               <div className="divide-y divide-border/50">

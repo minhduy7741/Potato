@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Patch, ParseIntPipe, UseGuards, UseInterceptors, UploadedFile, Res, ConflictException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Patch, ParseIntPipe, UseGuards, UseInterceptors, UploadedFile, Res, ConflictException, Request } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import * as fs from 'fs';
@@ -12,8 +12,8 @@ export class DatabasesController {
   constructor(private readonly databasesService: DatabasesService) { }
 
   @Get()
-  findAll() {
-    return this.databasesService.findAll();
+  findAll(@Request() req: any) {
+    return this.databasesService.findAll(req.user.id);
   }
 
   @Post()

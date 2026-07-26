@@ -22,11 +22,11 @@ export default function PlotsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
 
   const statusConfig: Record<string, any> = {
-    running: { label: "Running", cls: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-    stopped: { label: "Stopped", cls: "bg-muted text-muted-foreground border-border" },
-    hibernated: { label: "Hibernated", cls: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
-    sprouting: { label: "Sprouting", cls: "bg-primary/20 text-primary border-primary/30" },
-    error: { label: "Error", cls: "bg-red-500/20 text-red-400 border-red-500/30" },
+    running: { label: "Đang chạy", cls: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    stopped: { label: "Đã dừng", cls: "bg-muted text-muted-foreground border-border" },
+    hibernated: { label: "Ngủ đông", cls: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+    sprouting: { label: "Đang nảy mầm", cls: "bg-primary/20 text-primary border-primary/30" },
+    error: { label: "Lỗi", cls: "bg-red-500/20 text-red-400 border-red-500/30" },
   }
 
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
@@ -69,7 +69,7 @@ export default function PlotsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl flex items-center gap-3">
             <FolderKanban className="h-8 w-8 text-primary" />
-            My Plots
+            Dự án của tôi
           </h1>
           <p className="text-muted-foreground">Quản lý và theo dõi quá trình sinh trưởng của các dự án.</p>
         </div>
@@ -79,7 +79,7 @@ export default function PlotsPage() {
           </Button>
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setIsModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Plant New App
+            Gieo mầm App
           </Button>
         </div>
       </div>
@@ -142,7 +142,7 @@ export default function PlotsPage() {
             <h3 className="text-lg font-medium">Không tìm thấy dự án nào</h3>
             <p className="text-sm text-muted-foreground">Hãy thử tìm kiếm từ khóa khác hoặc tạo mới ngay.</p>
           </div>
-          <Button variant="secondary" onClick={() => setIsModalOpen(true)}>Plant First App</Button>
+          <Button variant="secondary" onClick={() => setIsModalOpen(true)}>Gieo mầm App đầu tiên</Button>
         </div>
       ) : (
         viewMode === "grid" ? (

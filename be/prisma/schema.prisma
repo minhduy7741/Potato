@@ -10,18 +10,50 @@ datasource db {
 }
 
 enum Role {
-  USER
   ADMIN
+  DEVELOPER
+}
+
+enum ProjectRole {
+  LEADER
+  DEVELOPER
+  OPERATOR
+  VIEWER
+}
+
+model CustomRole {
+  id                  Int      @id @default(autoincrement())
+  name                String   @unique
+  permissions         String[] // e.g. ["project:read", "logs:read"]
+  assignableByManager Boolean  @default(false)
+  ownerId             Int?     // Admin owner who created this role
+  owner               User?    @relation("AdminCustomRoles", fields: [ownerId], references: [id])
+  users               User[]
+  createdAt           DateTime @default(now())
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  name      String?
-  role      Role      @default(USER)
-  projects  Project[]
-  createdAt DateTime  @default(now())
+  id                Int             @id @default(autoincrement())
+  email             String          @unique
+  password          String
+  name              String?
+  role              Role            @default(DEVELOPER)
+  parentId          Int?            // Parent Admin account (Null if Super Admin or Admin itself)
+  parent            User?           @relation("UserSubAccounts", fields: [parentId], references: [id])
+  children          User[]          @relation("UserSubAccounts")
+  customRoleId      Int?
+  customRole        CustomRole?     @relation(fields: [customRoleId], references: [id])
+  ownedCustomRoles  CustomRole[]    @relation("AdminCustomRoles")
+  memberships       ProjectMember[]
+  projects          Project[]
+  
+  // Resource Quotas (Only meaningful for Admin accounts)
+  maxRam            Int             @default(1024)  // RAM limit in MB (default 1GB)
+  maxDisk           Int             @default(5)     // Disk limit in GB (default 5GB)
+  maxProjects       Int             @default(3)     // Max allowed projects
+  maxDatabases      Int             @default(2)     // Max allowed databases
+  
+  createdAt         DateTime        @default(now())
 }
 
 model Project {
@@ -46,15 +78,30 @@ model Project {
   autoScale           Boolean            @default(false)
   notificationsEnabled Boolean           @default(true)
   volumeMapping       String?            @default("/app/storage")
-  discordWebhook      String?
+  slackWebhook        String?
+  alertInterval       Int                @default(5)
   userId              Int
   user           User               @relation(fields: [userId], references: [id])
+  members        ProjectMember[]
   databases      DatabaseInstance[]
   envVariables   EnvVariable[]
   deployments    DeploymentLog[]
   activityLogs   ActivityLog[]
   stats          ProjectStat[]
   createdAt      DateTime           @default(now())
+}
+
+model ProjectMember {
+  id          Int         @id @default(autoincrement())
+  userId      Int
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   Int
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role        ProjectRole @default(VIEWER)
+  permissions String[]    // backup permissions
+  createdAt   DateTime    @default(now())
+
+  @@unique([userId, projectId])
 }
 
 model EnvVariable {

@@ -30,7 +30,7 @@ export class AuthService {
   // ─── Register ────────────────────────────────────────────────────────
 
   async register(registerDto: RegisterDto) {
-    const { email, password, name } = registerDto;
+    const { email, password, name, parentId } = registerDto;
 
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -38,8 +38,22 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    // Nếu có parentId -> Nhân viên do Admin Project tạo -> Cấp vai trò DEVELOPER
+    // Nếu không có parentId -> Người dùng tự đăng ký -> Cấp vai trò ADMIN (Admin Project)
+    let assignedRole: Role = Role.ADMIN;
+    let validParentId = parentId || null;
+
+    if (validParentId) {
+      const parentUser = await this.prisma.user.findUnique({ where: { id: validParentId } });
+      if (!parentUser) {
+        throw new BadRequestException('Tài khoản quản lý (parentId) không tồn tại.');
+      }
+      assignedRole = Role.DEVELOPER;
+    }
+
     const user = await this.prisma.user.create({
-      data: { email, password: hashedPassword, name, role: Role.USER },
+      data: { email, password: hashedPassword, name, role: assignedRole, parentId: validParentId },
+      include: { customRole: true },
     });
 
     const { password: _, ...userWithoutPassword } = user;
@@ -57,7 +71,10 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: { customRole: true },
+    });
     if (!user) {
       throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
     }
@@ -99,6 +116,16 @@ export class AuthService {
     });
 
     return { message: 'Đổi mật khẩu thành công' };
+  }
+
+  async getProfile(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { customRole: true },
+    });
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
   async updateProfile(userId: number, name?: string) {

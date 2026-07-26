@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { RolesController } from './roles.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtStrategy } from './jwt.strategy';
 
@@ -18,7 +19,7 @@ import { ProjectsModule } from '../projects/projects.module';
       signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any },
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, RolesController],
   providers: [AuthService, JwtStrategy],
   exports: [JwtModule, JwtStrategy],
 })

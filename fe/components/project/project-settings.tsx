@@ -17,6 +17,7 @@ import {
   Pencil,
   X,
   RefreshCw,
+  Send,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -47,8 +48,10 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
 
   // Advanced settings state
   const [volumeMapping, setVolumeMapping] = useState(project.volumeMapping || "/app/storage")
-  const [discordWebhook, setDiscordWebhook] = useState(project.discordWebhook || "")
+  const [slackWebhook, setSlackWebhook] = useState(project.slackWebhook || "")
+  const [alertInterval, setAlertInterval] = useState(project.alertInterval || 5)
   const [isSavingSettings, setIsSavingSettings] = useState(false)
+  const [isSendingTest, setIsSendingTest] = useState(false)
 
   // Custom domain state
   const [customDomain, setCustomDomain] = useState(project.customDomain || "")
@@ -178,7 +181,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
     try {
       await apiFetch(`/projects/${project.id}/settings`, {
         method: "PATCH",
-        body: JSON.stringify({ volumeMapping, discordWebhook }),
+        body: JSON.stringify({ volumeMapping, slackWebhook, alertInterval }),
       })
       toast.success("Cấu hình nâng cao đã được cập nhật thành công! 🥔")
       onUpdate?.()
@@ -188,6 +191,23 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
       setIsSavingSettings(false)
     }
   }
+
+  const handleTestAlert = async () => {
+    if (!slackWebhook) {
+      toast.error("Vui lòng nhập Slack Webhook URL trước!")
+      return
+    }
+    setIsSendingTest(true)
+    try {
+      await apiFetch(`/projects/${project.id}/settings/test-alert`, { method: "POST" })
+      toast.success("✅ Đã gửi tin nhắn thử về Slack! Kiểm tra kênh #all-duy của bạn.")
+    } catch (error: any) {
+      toast.error(error.message || "Không thể gửi tin nhắn thử — kiểm tra lại Webhook URL")
+    } finally {
+      setIsSendingTest(false)
+    }
+  }
+
 
   const isSslActive = project.sslStatus === 'active' || project.sslStatus === 'expiring_soon'
   const isExpiring = project.sslStatus === 'expiring_soon'
@@ -205,14 +225,14 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
             <div className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle className="text-lg">General Settings</CardTitle>
-                <CardDescription>Configure your plot&apos;s basic settings</CardDescription>
+                <CardTitle className="text-lg">Cài đặt Chung</CardTitle>
+                <CardDescription>Cấu hình các thiết lập cơ bản cho dự án của bạn</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="projectName">Plot Name</Label>
+              <Label htmlFor="projectName">Tên dự án (Plot Name)</Label>
               <Input
                 id="projectName"
                 value={projectName}
@@ -221,7 +241,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Mô tả</Label>
               <Input
                 id="description"
                 defaultValue="Main API service for the Potato platform"
@@ -232,8 +252,8 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
               <div className="flex items-center gap-3">
                 <Globe className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium text-foreground">Public Access</p>
-                  <p className="text-xs text-muted-foreground">Allow external traffic to this plot</p>
+                  <p className="text-sm font-medium text-foreground">Truy cập công khai</p>
+                  <p className="text-xs text-muted-foreground">Cho phép truy cập từ internet bên ngoài</p>
                 </div>
               </div>
               <Switch checked={publicAccess} onCheckedChange={setPublicAccess} />
@@ -242,7 +262,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
               <div className="flex items-center gap-3">
                 <Settings className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium text-foreground">Auto-Scale</p>
+                  <p className="text-sm font-medium text-foreground">Tự động Co giãn (Auto-Scale)</p>
                   <p className="text-xs text-muted-foreground">Tự động tăng RAM/CPU khi ứng dụng bị quá tải</p>
                 </div>
               </div>
@@ -252,7 +272,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
               <div className="flex items-center gap-3">
                 <Bell className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium text-foreground">Notifications</p>
+                  <p className="text-sm font-medium text-foreground">Thông báo</p>
                   <p className="text-xs text-muted-foreground">Nhận cảnh báo khi Deploy lỗi hoặc dự án gặp sự cố</p>
                 </div>
               </div>
@@ -264,7 +284,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
               disabled={isSavingGeneral}
             >
               {isSavingGeneral ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save Changes
+              Lưu thay đổi
             </Button>
           </CardContent>
         </Card>
@@ -281,14 +301,14 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
             <div className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle className="text-lg">Advanced Settings</CardTitle>
+                <CardTitle className="text-lg">Cài đặt Nâng cao</CardTitle>
                 <CardDescription>Cấu hình nâng cao cho dự án của bạn</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="volumeMapping">Persistent Volume Path</Label>
+              <Label htmlFor="volumeMapping">Đường dẫn persistent volume lưu trữ</Label>
               <Input
                 id="volumeMapping"
                 placeholder="/app/storage"
@@ -301,17 +321,67 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="discordWebhook">Discord Alert Webhook</Label>
+              <Label htmlFor="slackWebhook">Slack Alert Webhook</Label>
               <Input
-                id="discordWebhook"
-                placeholder="https://discord.com/api/webhooks/..."
-                value={discordWebhook}
-                onChange={(e) => setDiscordWebhook(e.target.value)}
+                id="slackWebhook"
+                placeholder="https://hooks.slack.com/services/..."
+                value={slackWebhook}
+                onChange={(e) => setSlackWebhook(e.target.value)}
                 className="bg-muted border-border text-sm"
               />
+              <div className="flex gap-2 mt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-xs border-dashed border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500"
+                  onClick={handleTestAlert}
+                  disabled={isSendingTest || !slackWebhook}
+                >
+                  {isSendingTest
+                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                    : <Send className="h-3 w-3" />}
+                  {isSendingTest ? "Đang gửi..." : "Gửi tin nhắn thử"}
+                </Button>
+              </div>
               <p className="text-[11px] text-muted-foreground">
-                Nhập Discord Webhook URL để nhận thông báo tức thời khi triển khai thành công hoặc thất bại.
+                Nhập Slack Webhook URL để nhận thông báo tức thời khi triển khai thành công hoặc thất bại.
               </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="alertInterval" className="flex items-center gap-2">
+                ⏱️ Thời gian chờ trước khi gửi cảnh báo (phút)
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="alertInterval"
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={alertInterval}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10)
+                    if (!isNaN(val) && val >= 1 && val <= 60) setAlertInterval(val)
+                  }}
+                  className="bg-muted border-border text-sm w-24 text-center font-mono"
+                />
+                <div className="flex gap-1">
+                  {[1, 5, 10, 15, 30].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setAlertInterval(v)}
+                      className={`px-2 py-1 text-xs rounded border transition-colors ${
+                        alertInterval === v
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      {v}p
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             <Button
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-2"
@@ -337,7 +407,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
               <div className="flex items-center gap-2">
                 <Globe className="h-5 w-5 text-primary" />
                 <div>
-                  <CardTitle className="text-lg">Domain Management</CardTitle>
+                  <CardTitle className="text-lg">Quản lý Tên miền</CardTitle>
                   <CardDescription>Kết nối tên miền riêng cho dự án của bạn</CardDescription>
                 </div>
               </div>
@@ -351,7 +421,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
           <CardContent className="p-6 space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="customDomain">Custom Domain</Label>
+                <Label htmlFor="customDomain">Tên miền riêng (Custom Domain)</Label>
                 <div className="flex gap-2">
                   <Input
                     id="customDomain"
@@ -377,7 +447,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
                     </>
                   ) : (
                     <Button variant="outline" className="border-primary text-primary hover:bg-primary/10" onClick={() => setIsEditingDomain(true)}>
-                      <Pencil className="mr-1.5 h-3 w-3" /> Edit
+                      <Pencil className="mr-1.5 h-3 w-3" /> Chỉnh sửa
                     </Button>
                   )}
                 </div>
@@ -391,7 +461,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-foreground">
-                        {isExpiring ? 'Certificate Expiring Soon' : 'SSL Protection Active'}
+                        {isExpiring ? 'Chứng chỉ sắp hết hạn' : 'Đã kích hoạt bảo mật SSL'}
                       </p>
                       <p className="text-xs text-muted-foreground whitespace-pre-line">
                         {isExpiring
@@ -417,9 +487,9 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
                 disabled={project.sslStatus === 'provisioning' || isEnablingSsl}
               >
                 {isEnablingSsl ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Encrypting...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Đang kích hoạt...</>
                 ) : (
-                  <><Lock className="mr-2 h-4 w-4" />{project.sslStatus === 'provisioning' ? 'Encrypting...' : 'Encrypt with SSL'}</>
+                  <><Lock className="mr-2 h-4 w-4" />{project.sslStatus === 'provisioning' ? 'Đang kích hoạt...' : 'Kích hoạt bảo mật với SSL'}</>
                 )}
               </Button>
             )}
@@ -439,7 +509,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
             <div className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle className="text-lg">Restart Policy</CardTitle>
+                <CardTitle className="text-lg">Chính sách Khởi động lại</CardTitle>
                 <CardDescription>Chính sách tự khởi động khi container bị lỗi</CardDescription>
               </div>
             </div>
@@ -498,15 +568,15 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-400" />
               <div>
-                <CardTitle className="text-lg text-red-400">Danger Zone</CardTitle>
-                <CardDescription>Irreversible actions - proceed with caution</CardDescription>
+                <CardTitle className="text-lg text-red-400">Vùng nguy hiểm (Danger Zone)</CardTitle>
+                <CardDescription>Các hành động không thể khôi phục - hãy cẩn trọng</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-lg border border-red-500/30 bg-red-500/5 p-4">
               <div>
-                <p className="font-medium text-foreground">Hibernate Plot</p>
+                <p className="font-medium text-foreground">Ngủ đông Dự án (Hibernate)</p>
                 <p className="text-sm text-muted-foreground">Tạm dừng dự án để tiết kiệm tài nguyên</p>
               </div>
               <Button
@@ -515,7 +585,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
                 onClick={() => setHibernateConfirmOpen(true)}
                 disabled={isHibernating || project.status === 'hibernated'}
               >
-                {isHibernating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Hibernate"}
+                {isHibernating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ngủ đông"}
               </Button>
               <ConfirmDialog
                 open={hibernateConfirmOpen}
@@ -529,8 +599,8 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
             </div>
             <div className="flex items-center justify-between rounded-lg border border-red-500/30 bg-red-500/5 p-4">
               <div>
-                <p className="font-medium text-foreground">Delete Plot</p>
-                <p className="text-sm text-muted-foreground">Permanently remove this project and all data</p>
+                <p className="font-medium text-foreground">Xóa dự án (Delete)</p>
+                <p className="text-sm text-muted-foreground">Xóa vĩnh viễn dự án này và mọi dữ liệu liên quan</p>
               </div>
               <Button
                 variant="destructive"
@@ -539,7 +609,7 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
                 disabled={isDeleting}
               >
                 {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                Delete
+                Xóa
               </Button>
               <ConfirmDialog
                 open={deleteConfirmOpen}

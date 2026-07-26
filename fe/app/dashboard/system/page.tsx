@@ -17,7 +17,7 @@ import {
   Loader2,
   Wifi,
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { apiFetch } from "@/lib/api"
@@ -59,7 +59,6 @@ function ResourceCard({
   title,
   icon,
   percent,
-  color,
   colorHex,
   lines,
   warning,
@@ -68,7 +67,6 @@ function ResourceCard({
   title: string
   icon: React.ReactNode
   percent: number
-  color: string
   colorHex: string
   lines: { label: string; value: string }[]
   warning?: boolean
@@ -193,8 +191,6 @@ export default function SystemMonitorPage() {
   useEffect(() => {
     const userJson = localStorage.getItem("potato_user")
     if (!userJson) { router.push("/login"); return }
-    const user = JSON.parse(userJson)
-    if (user?.role !== "ADMIN") { setUnauthorized(true); setLoading(false); return }
     fetchStats()
   }, [router, fetchStats])
 
@@ -226,7 +222,7 @@ export default function SystemMonitorPage() {
           <div>
             <h2 className="text-xl font-bold text-foreground">Truy cập bị từ chối</h2>
             <p className="text-muted-foreground text-sm mt-1">
-              Chỉ tài khoản có quyền <span className="text-amber-400 font-semibold">Admin</span> mới có thể xem trang này.
+              Bạn không có quyền hệ thống để xem thông số hạ tầng vật lý (`system:infrastructure:read`).
             </p>
           </div>
           <Button variant="outline" onClick={() => router.push("/dashboard")}>
@@ -261,7 +257,7 @@ export default function SystemMonitorPage() {
               <Activity className="h-5 w-5 text-amber-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">System Monitor</h1>
+              <h1 className="text-2xl font-bold text-foreground">Giám sát hệ thống</h1>
               <p className="text-sm text-muted-foreground">Giám sát tài nguyên máy chủ theo thời gian thực</p>
             </div>
           </div>
@@ -319,7 +315,6 @@ export default function SystemMonitorPage() {
           title="RAM (Bộ nhớ)"
           icon={<HardDrive className="h-5 w-5" />}
           percent={stats.ram.usagePercent}
-          color="sky"
           colorHex="#38bdf8"
           delay={0.15}
           lines={[
@@ -333,7 +328,6 @@ export default function SystemMonitorPage() {
           title="CPU (Bộ xử lý)"
           icon={<Cpu className="h-5 w-5" />}
           percent={stats.cpu.usagePercent}
-          color="violet"
           colorHex="#a78bfa"
           delay={0.2}
           lines={[
@@ -347,7 +341,6 @@ export default function SystemMonitorPage() {
           title="Ổ cứng (Disk)"
           icon={<Server className="h-5 w-5" />}
           percent={stats.disk.usagePercent}
-          color="amber"
           colorHex="#f59e0b"
           warning={diskWarning}
           delay={0.25}
@@ -401,16 +394,6 @@ export default function SystemMonitorPage() {
           />
         </div>
       </div>
-
-      {/* Auto-refresh notice */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="text-center text-[11px] text-muted-foreground/50 italic"
-      >
-        🔄 Tự động làm mới mỗi 10 giây · Chỉ dành riêng cho quản trị viên hệ thống
-      </motion.p>
     </div>
   )
 }

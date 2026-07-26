@@ -35,12 +35,11 @@ export function CTASection() {
             </motion.div>
 
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-              Ready to get{" "}
-              <span className="text-primary">mashing</span>?
+              Sẵn sàng gieo mầm{" "}
+              <span className="text-primary">dự án</span>?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-              Join thousands of teams who have already upgraded their developer
-              experience. Start deploying in minutes, not hours.
+              Tham gia cùng hàng ngàn đội ngũ đã nâng tầm trải nghiệm phát triển phần mềm. Bắt đầu triển khai trong vài phút, không phải vài giờ.
             </p>
 
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -50,7 +49,7 @@ export function CTASection() {
                 asChild
               >
                 <Link href="/login">
-                  Start for Free
+                  Bắt đầu miễn phí
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -59,12 +58,12 @@ export function CTASection() {
                 variant="outline"
                 className="border-border text-foreground hover:bg-muted"
               >
-                Talk to Sales
+                Liên hệ hỗ trợ
               </Button>
             </div>
 
             <p className="mt-6 text-sm text-muted-foreground">
-              No credit card required. Free tier includes 100 deployments/month.
+              Không yêu cầu thẻ tín dụng. Gói miễn phí bao gồm 100 lượt deploy/tháng.
             </p>
           </div>
         </motion.div>

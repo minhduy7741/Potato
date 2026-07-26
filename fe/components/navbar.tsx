@@ -25,35 +25,35 @@ export function Navbar() {
               href="#features"
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
-              Features
+              Tính năng
             </Link>
             <Link
               href="#pricing"
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
-              Pricing
+              Bảng giá
             </Link>
             <Link
               href="#docs"
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
-              Docs
+              Tài liệu
             </Link>
             <Link
               href="#about"
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
-              About
+              Về chúng tôi
             </Link>
           </div>
 
           {/* Desktop CTA */}
           <div className="hidden items-center gap-4 md:flex">
             <Button variant="ghost" className="text-muted-foreground hover:text-foreground" asChild>
-              <Link href="/login">Sign In</Link>
+              <Link href="/login">Đăng nhập</Link>
             </Button>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
-              <Link href="/login">Get Started</Link>
+              <Link href="/login">Bắt đầu ngay</Link>
             </Button>
           </div>
 
@@ -80,35 +80,35 @@ export function Navbar() {
                 className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Features
+                Tính năng
               </Link>
               <Link
                 href="#pricing"
                 className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Pricing
+                Bảng giá
               </Link>
               <Link
                 href="#docs"
                 className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Docs
+                Tài liệu
               </Link>
               <Link
                 href="#about"
                 className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                About
+                Về chúng tôi
               </Link>
               <div className="flex flex-col gap-2 pt-4">
                 <Button variant="ghost" className="w-full justify-start text-muted-foreground" asChild>
-                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
+                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Đăng nhập</Link>
                 </Button>
                 <Button className="w-full bg-primary text-primary-foreground" asChild>
-                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Get Started</Link>
+                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Bắt đầu ngay</Link>
                 </Button>
               </div>
             </div>

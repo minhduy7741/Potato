@@ -5,7 +5,7 @@
 
 ## DB Schema (Prisma)
 - `User`: Accounts & credentials.
-- `Project`: Container ID, state, resource limits (RAM/CPU), Git repo & token, subdomain, SSL status, restart policy, auto-scale flag, Discord webhook.
+- `Project`: Container ID, state, resource limits (RAM/CPU), Git repo & token, subdomain, SSL status, restart policy, auto-scale flag, Slack webhook.
 - `EnvVariable`: Key-value pairs linked to projects.
 - `DeploymentLog`: Git commit details, build logs, and status history.
 - `ActivityLog`: System event log for actions (deploy, scale, heal).
@@ -16,7 +16,7 @@
 ## Core Features & Logic Flows
 1. **App Deployment Pipeline**:
    - Path: [projects.service.ts](file:///C:/Users/minhd/OneDrive/Desktop/Potato/be/src/projects/projects.service.ts)
-   - Flow: Check host RAM -> Allocate port (10000-19999) -> Git clone -> Auto Dockerfile detection/generation -> Build Image -> Run temp container -> Health Check (15s) -> Route via Nginx configs -> Stop/delete old container -> Rename new -> Discord webhook status update.
+   - Flow: Check host RAM -> Allocate port (10000-19999) -> Git clone -> Auto Dockerfile detection/generation -> Build Image -> Run temp container -> Health Check (15s) -> Route via Nginx configs -> Stop/delete old container -> Rename new -> Slack webhook status update.
 2. **Zero-downtime & Rollback**:
    - Path: [projects.service.ts](file:///C:/Users/minhd/OneDrive/Desktop/Potato/be/src/projects/projects.service.ts) & [git-deploy.tsx](file:///C:/Users/minhd/OneDrive/Desktop/Potato/fe/components/project/git-deploy.tsx)
    - Custom tags per deploy (`potato-app-X:dep-Y`). Rollback endpoint: `/api/projects/:id/rollback/:depId`.
@@ -25,7 +25,7 @@
    - Flow: Cron 5m -> CPU < 15% -> reduce limits (`-256MB RAM`, `-0.5 CPU`) -> min limit: `256MB RAM / 1 CPU`.
 4. **Auto-heal (Container Monitoring)**:
    - Path: [stats-collector.service.ts](file:///C:/Users/minhd/OneDrive/Desktop/Potato/be/src/projects/stats-collector.service.ts)
-   - Flow: Cron 1m -> check running containers -> if crashed -> restart based on project policy -> Discord notify.
+   - Flow: Cron 1m -> check running containers -> if crashed -> restart based on project policy -> Slack notify.
 5. **SQL Query Runner**:
    - Path: [databases.service.ts](file:///C:/Users/minhd/OneDrive/Desktop/Potato/be/src/databases/databases.service.ts) & [page.tsx](file:///C:/Users/minhd/OneDrive/Desktop/Potato/fe/app/dashboard/databases/page.tsx)
    - Flow: Endpoint `/api/databases/:id/query` -> uses safe `docker cp` for query file (prevents injection) -> exec via CLI inside container -> parses TSV -> UI interactive table.

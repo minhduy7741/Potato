@@ -3,28 +3,28 @@ import { PotatoLogo } from "@/components/potato-logo"
 import { Github, Twitter, Linkedin } from "lucide-react"
 
 const footerLinks = {
-  Product: [
-    { label: "Features", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "Changelog", href: "#" },
-    { label: "Roadmap", href: "#" },
+  "Sản phẩm": [
+    { label: "Tính năng", href: "#features" },
+    { label: "Bảng giá", href: "#pricing" },
+    { label: "Nhật ký thay đổi", href: "#" },
+    { label: "Lộ trình", href: "#" },
   ],
-  Resources: [
-    { label: "Documentation", href: "#docs" },
-    { label: "API Reference", href: "#" },
-    { label: "Guides", href: "#" },
-    { label: "Examples", href: "#" },
+  "Tài nguyên": [
+    { label: "Tài liệu", href: "#docs" },
+    { label: "Tài liệu API", href: "#" },
+    { label: "Hướng dẫn", href: "#" },
+    { label: "Ví dụ", href: "#" },
   ],
-  Company: [
-    { label: "About", href: "#about" },
+  "Công ty": [
+    { label: "Về chúng tôi", href: "#about" },
     { label: "Blog", href: "#" },
-    { label: "Careers", href: "#" },
-    { label: "Contact", href: "#" },
+    { label: "Tuyển dụng", href: "#" },
+    { label: "Liên hệ", href: "#" },
   ],
-  Legal: [
-    { label: "Privacy", href: "#" },
-    { label: "Terms", href: "#" },
-    { label: "Security", href: "#" },
+  "Pháp lý": [
+    { label: "Bảo mật", href: "#" },
+    { label: "Điều khoản", href: "#" },
+    { label: "An toàn", href: "#" },
     { label: "Cookies", href: "#" },
   ],
 }
@@ -41,8 +41,7 @@ export function Footer() {
               <span className="text-xl font-bold text-foreground">Potato</span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
-              The friendly internal developer platform that makes infrastructure
-              as easy as ordering fries.
+              Nền tảng phát triển nội bộ thân thiện giúp quản lý hạ tầng dễ dàng như ăn khoai tây chiên.
             </p>
             <div className="mt-6 flex gap-4">
               <a
@@ -92,10 +91,10 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Potato Platform. All rights reserved.
+            &copy; {new Date().getFullYear()} Potato Platform. Bảo lưu mọi quyền.
           </p>
           <p className="text-sm text-muted-foreground">
-            Made with 🥔 by developers, for developers.
+            Phát triển bằng 🥔 bởi lập trình viên, cho lập trình viên.
           </p>
         </div>
       </div>

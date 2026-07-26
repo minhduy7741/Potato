@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsNumber, IsString, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email phải có định dạng hợp lệ (có dấu @)' })
@@ -12,4 +12,8 @@ export class RegisterDto {
   @IsString()
   @IsNotEmpty({ message: 'Tên không được để trống' })
   name: string;
+
+  @IsOptional()
+  @IsNumber()
+  parentId?: number;
 }

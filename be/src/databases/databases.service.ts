@@ -3,6 +3,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   Logger
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -31,8 +32,41 @@ export class DatabasesService {
     private readonly docker: DockerService,
   ) { }
 
-  async findAll() {
+  async findAll(userId?: number) {
+    let whereCondition = {};
+    if (userId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (user) {
+        const isSuperAdmin = user.role === 'ADMIN' && user.email === 'superadmin@potato.com';
+        const isTenantAdmin = user.role === 'ADMIN' && user.email !== 'superadmin@potato.com';
+
+        if (isSuperAdmin) {
+          whereCondition = {};
+        } else if (isTenantAdmin) {
+          whereCondition = {
+            project: {
+              OR: [
+                { userId },
+                { user: { parentId: userId } }
+              ]
+            }
+          };
+        } else {
+          whereCondition = {
+            project: {
+              members: {
+                some: { userId }
+              }
+            }
+          };
+        }
+      }
+    }
+
     const dbs = await this.prisma.databaseInstance.findMany({
+      where: whereCondition,
       include: { project: true, activityLogs: true },
     });
 
@@ -71,6 +105,34 @@ export class DatabasesService {
 
     if (!project) {
       throw new NotFoundException(`Project with ID ${data.projectId} not found`);
+    }
+
+    // Kiểm tra giới hạn Quota Database của Tenant
+    const owner = await this.prisma.user.findUnique({
+      where: { id: project.userId }
+    });
+    if (owner) {
+      const adminId = owner.parentId || owner.id;
+      const admin = await this.prisma.user.findUnique({
+        where: { id: adminId }
+      });
+
+      if (admin) {
+        const tenantDbsCount = await this.prisma.databaseInstance.count({
+          where: {
+            project: {
+              OR: [
+                { userId: adminId },
+                { user: { parentId: adminId } }
+              ]
+            }
+          }
+        });
+
+        if (tenantDbsCount >= admin.maxDatabases) {
+          throw new BadRequestException(`Doanh nghiệp của bạn đã vượt quá giới hạn số lượng Database cho phép (Tối đa: ${admin.maxDatabases} DB). Vui lòng liên hệ Super Admin để nâng cấp.`);
+        }
+      }
     }
 
     const hostPort = await this.allocatePort();

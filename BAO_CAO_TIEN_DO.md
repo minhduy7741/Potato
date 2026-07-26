@@ -52,7 +52,7 @@ sequenceDiagram
         NX-->>BE: Reload Nginx thành công
         BE->>DK: Stop và Xóa Container cũ
         BE->>DK: Đổi tên Container mới thành Container chính thức
-        BE->>D: Thông báo Deploy Thành Công (Dashboard & Discord)
+        BE->>D: Thông báo Deploy Thành Công (Dashboard & Slack)
     else Trường hợp 2: Health Check THẤT BẠI (Fail / Crash)
         BE->>DK: Dọn dẹp & Xóa Container mới
         Note over BE: Giữ nguyên Container cũ đang chạy ổn định
@@ -124,7 +124,7 @@ graph TD
     B -->|Không đủ RAM| C[Dừng Deploy - Báo lỗi tài nguyên]
     B -->|Đủ RAM| D[3. Cấp phát cổng Host tự động 10000 - 19999]
     D --> E[4. Clone mã nguồn Git về thư mục tạm với độ sâu depth=1]
-    E -->|Lỗi Git Clone| F[Dừng Deploy - Ghi lỗi vào Log & Báo về Discord]
+    E -->|Lỗi Git Clone| F[Dừng Deploy - Ghi lỗi vào Log & Báo về Slack]
     E -->|Git Clone OK| G[5. Tự động quét và nạp biến môi trường từ .env.example]
     G --> H[6. Nhận diện ngôn ngữ & Sinh Dockerfile tự động]
     H -->|Có sẵn Dockerfile| I[Dùng Dockerfile của người dùng]
@@ -136,7 +136,7 @@ graph TD
     M -->|Thất bại| N[Rollback: Xóa container tạm - Giữ nguyên Container cũ]
     M -->|Thành công| O[10. Cập nhật Nginx Config & Reload Virtual Server]
     O --> P[11. Dọn dẹp: Xóa container cũ - Đổi tên container mới thành chính thức]
-    P --> Q[12. Gửi thông tin thành công lên Dashboard & Discord]
+    P --> Q[12. Gửi thông tin thành công lên Dashboard & Slack]
 ```
 
 ---

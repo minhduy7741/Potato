@@ -1,0 +1,2086 @@
+TRƯỜNG
+ ĐẠI HỌC CÔNG NGHỆ SÀI GÒN
+KHOA CÔNG NGHỆ THÔNG TIN
+---
+oOo---
+LUẬN VĂN TỐT NGHIỆP
+Tên đề tài:
+Xây 
+dựng nền tảng tự động hóa triển khai ứng dụng và cơ sở dữ liệu Potato
+Người
+ hướng dẫn: 
+ThS. 
+TRẦN NGỌC ĐĂNG NGUYÊN
+Sinh viên thực hiện: 
+NGUYỄN MINH DUY
+TP. HỒ CHÍ MINH – NĂM 20
+26
+LỜI CẢM ƠN
+Đ
+ề tài “Xây dựng nền tảng phát triển nội bộ Potato (Internal Developer Platform - IDP)” là nội dung em đã lựa chọn nghiên cứu và thực hiện trong suốt quá trình làm luận văn tốt nghiệp, sau thời gian học tập và rèn luyện tại Khoa Công nghệ Thông tin, Trường Đại học Công nghệ Sài Gòn.
+Trong suốt quá trình thực hiện đề tài, em đã nhận được rất nhiều sự quan tâm, giúp đỡ và động viên quý báu từ quý thầy cô. Em xin được gửi lời cảm ơn chân thành và sâu sắc đến tất cả quý thầy cô và nhà trường.
+Trước hết, em xin chân thành cảm ơn Khoa Công nghệ Thông tin, Trường Đại học Công nghệ Sài Gòn đã tạo ra một môi trường học tập năng động, thân thiện và chuyên nghiệp. Nhờ vào những kiến thức nền tảng cùng các kỹ năng thực tiễn được trang bị trong suốt thời gian học tập, em đã có đủ cơ sở để thực hiện và hoàn thành luận văn tốt nghiệp này.
+Em đặc biệt gửi lời cảm ơn sâu sắc đến giảng viên hướng dẫn ThS.
+Trần Ngọc Đăng Nguyên
+, người đã tận tình hướng dẫn, hỗ trợ em trong suốt quá trình thực hiện đề tài. Với sự tận tâm, trách nhiệm và những góp ý quý báu của thầy, em đã có được định hướng rõ ràng và giải pháp phù hợp để hoàn thành tốt luận văn.
+Em cũng xin trân trọng cảm ơn Ban Giám hiệu và toàn thể quý thầy cô giảng viên của trường, những người đã luôn tạo điều kiện thuận lợi để em được học tập, tiếp thu kiến thức và kinh nghiệm thực tiễn, là nền tảng vững chắc cho quá trình nghiên cứu và hoàn thiện luận văn.
+Mặc dù đã cố gắng hết sức, nhưng do thời gian hạn chế và trình độ còn nhiều thiếu sót, luận văn không tránh khỏi những điểm chưa hoàn thiện. Em rất mong nhận được sự cảm thông và những góp ý quý báu từ quý thầy cô để em có thể rút kinh nghiệm và cải thiện trong tương lai.
+Em xin chân thành cảm ơn
+MỤC LỤC
+Chương 1
+. GIỚI THIỆU
+1
+1.1 ĐẶT VẤN ĐỀ
+1
+1.2 NHỮNG THỬ THÁCH CẦN GIẢI QUYẾT
+1
+1.3 NỘI DUNG, PHẠM VI THỰC HIỆN
+2
+1.3.2 Quản trị viên doanh nghiệp
+3
+1.3.3 Nhân viên / Lập trình viên
+4
+1.4 KẾT QUẢ CẦN ĐẠT
+6
+1.
+4.1
+ Kết quả chức năng hệ thống (Mô-đun phần mềm)
+6
+1.4.2 Kết quả kỹ thuật và phi chức năng
+7
+Chương 2. PHƯƠNG PHÁP THỰC HIỆN
+9
+2.1 CÁC HỆ THỐNG TƯƠNG TỰ
+9
+2.2 CÔNG NGHỆ SỬ DỤNG
+13
+2.2.1 Node.js và NestJS Framework (Phần Backend)
+13
+2.2.2 Next.js và TailwindCSS (Phần Frontend)
+14
+2.2.3 Prisma ORM và PostgreSQL (CSDL Hệ thống)
+14
+2.2.4 Docker Engine API (Hạ tầng ảo hóa)
+14
+2.2.5 Nginx Reverse Proxy và SSL Let's Encrypt (Định tuyến & Bảo mật)
+14
+2.3 PHÂN TÍCH YÊU CẦU
+15
+2.3.1 Các quy trình, nghiệp vụ
+16
+2.3.2 Sơ đồ chức năng
+25
+2.3.3 Sơ đồ Use case tổng quát
+26
+Chương 3. THIẾT KẾ
+27
+3.1 MÔ HÌNH DỮ LIỆU
+27
+3.2 MÔ HÌNH XỬ LÝ
+32
+3.2.1 Use case chi tiết
+32
+3.2.2 Sơ đồ tuần tự
+44
+3.3.3 Sơ đồ hoạt động
+49
+3.3 HỆ THỐNG MÀN HÌNH
+57
+3.3.1 Giao diện trang 
+Admin doanh nghiệp
+57
+Chương 4. THỬ NGHIỆM
+64
+4.1 CÁC KỊCH BẢN THỬ NGHIỆM
+64
+4.1.1 Kiểm thử chức năng đăng nhập
+64
+4.1.2 Kiểm thử chức năng đăng ký
+64
+4.1.3 Kiểm thử chức năng triển khai ứng dụng (Deploy)
+65
+4.1.4 Kiểm thử chức năng khởi tạo Cơ sở dữ liệu
+65
+4.1.4 Kiểm thử chức năng gửi cảnh báo (Slack Webhook)
+66
+4.2 KẾT QUẢ THỬ NGHIỆM CÁC KỊCH BẢN
+66
+4.2.1 Kết quả kiểm thử chức năng đăng nhập
+66
+4.2.2 Kết quả kiểm thử chức năng đăng ký
+66
+4.2.3 Kết quả kiểm thử chức năng triển khai ứng dụng (Deploy)
+67
+4.2.4 Kết quả kiểm thử chức năng khởi tạo Cơ sở dữ liệu
+67
+4.2.4 Kết quả kiểm thử chức năng gửi cảnh báo (Slack Webhook)
+67
+4.3 XỬ LÝ CÁC TRƯỜNG HỢP NGOẠI LỆ
+68
+Chương 5. KẾT LUẬN
+69
+5.1 KẾT QUẢ ĐỐI CHIẾU VỚI MỤC TIÊU
+69
+5.2 CÁC VẤN ĐỀ CÒN TỒN ĐỌNG
+70
+5.3 MỞ RỘNG
+70
+PHỤ LỤC
+71
+TÀI LIỆU THAM KHẢO
+73
+MỤC LỤC
+ CÁC
+ HÌNH
+ VẼ
+Hình 2-1:
+ Giao diện chính trang Render.com
+14
+Hình 2-2:
+ Giao diện cấu hình kết nối kho chứa Git
+15
+Hình 2-3:
+ Giao diện xem Nhật ký Logs
+16
+Hình 2-4:
+ Giao diện  quản lý các biến môi trường
+16
+Hình 2-5:
+ Giao diện khởi tạo nhanh cơ sở dữ liệu
+17
+Hình 2-6
+: Quy trình Triển khai ứng dụng tự động
+21
+Hình 2-7
+: Quy trình Khởi tạo Cơ sở dữ liệu tự động
+22
+Hình 2-8
+: Quy trình Kiểm soát Quota RAM khi Khởi chạy Dự án
+23
+Hình 2-9
+: Quy trình Cảnh báo sự cố qua Slack (Slack Alert)
+24
+Hình 2-10:
+ Sơ đồ chức năng của trang web
+25
+Hình 2-11:
+ Use case tổng quát của trang web
+26
+Hình 3-1:
+ Mô hình dữ liệu mức vật lý
+27
+Hình 3-2
+: Use case đăng nhập
+34
+Hình 3-3
+: Use case đăng ký
+35
+Hình 3-4
+: Use case triển khai ứng dụng tự động (Git Deploy)
+36
+Hình 3-5
+: Use case Quản lý Tài nguyên và Giám sát (Resource & Monitoring)
+38
+Hình 3-6
+: Use case Khởi tạo Cơ sở dữ liệu (Database Provisioning)
+39
+Hình 3-7
+: Use case Quản lý Thành viên & Phân quyền (RBAC)
+41
+Hình 3-8
+: Use case Quản lý Vai trò Tùy biến (Custom Roles)
+42
+Hình 3-9
+: Use case Cảnh báo sự cố qua Slack (Slack Alert)
+44
+Hình 3-10
+: Sơ đồ tuần tự đăng nhập
+45
+Hình 3-11
+: Sơ đồ tuần tự đăng ký
+46
+Hình 3-12
+: Sơ đồ tuần tự Triển khai ứng dụng (Git Deploy)
+47
+Hình 3-13
+: Sơ đồ tuần tự Quản lý Tài nguyên (Scale RAM/CPU)
+47
+Hình 3-14
+: Sơ đồ tuần tự Khởi tạo Cơ sở dữ liệu
+47
+Hình 3-15
+: Sơ đồ tuần tự Quản lý Thành viên & Phân quyền (RBAC)
+48
+Hình 3-16
+: Sơ đồ tuần tự Tạo Vai trò Tùy biến (Custom Roles)
+48
+Hình 3-17
+: Sơ đồ tuần tự Cảnh báo sự cố qua Slack (Slack Alert)
+49
+Hình 3-18
+: Sơ đồ hoạt động đăng nhập
+50
+Hình 3-19
+: Sơ đồ hoạt động đăng ký
+51
+Hình 3-20
+: Sơ đồ hoạt động Triển khai ứng dụng (Git Deploy)
+52
+Hình 3-21
+: Sơ đồ hoạt động Cập nhật Tài nguyên
+53
+Hình 3-22
+: Sơ đồ hoạt động Khởi tạo Cơ sở dữ liệu
+54
+Hình 3-23
+: Sơ đồ hoạt động Quản lý Thành viên & Phân quyền (RBAC)
+55
+Hình 3-24
+: Sơ đồ hoạt động Tạo Vai trò Tùy biến (Custom Roles)
+56
+Hình 3-25
+: Sơ đồ hoạt động Cảnh báo sự cố qua Slack (Slack Alert)
+57
+Hình 3-26
+: Thiết kế giao diện trang chủ
+57
+Hình 3-27
+: Thiết kế giao diện đăng nhập
+57
+Hình 3-28
+: Thiết kế giao diện đăng kí
+58
+Hình 3-29
+: Thiết kế giao diện dashboad
+58
+Hình 3-30
+: Thiết kế giao diện quản lý dự án
+59
+Hình 3-31
+: Thiết kế giao diện quản lý cơ sở dữ liệu
+59
+Hình 3-32
+: Thiết kế giao diện quản lý tài khoản
+60
+Hình 3-33
+: Thiết kế giao diện trang quản lý vài trò
+60
+Hình 3-34
+: Thiết kế giao diện giám sát hệ thống
+61
+Hình 3-35
+: Thiết kế giao diện trang chi tiết dự án
+61
+Hình 3-36
+: Thiết kế giao diện SuperAdmin doanh nghiệp
+62
+Hình 3-37
+: Thiết kế giao diện trang cấu hình biến môi trường
+62
+Hình 3-38
+: Thiết kế giao diện trang theo dõi nhật ký hoạt động
+63
+Hình 3-39
+: Thiết kế giao diện trang thông số kỹ thuật
+63
+Hình 3-40
+: Thiết kế giao diện trang cài đặt dự án
+64
+Hình 3-41
+: Thiết kế giao diện trang cài đặt dự án
+64
+Hình 3-42
+: Thiết kế giao diện trang cài đặt tài khoản
+65
+Chương
+ 
+1
+.
+ GIỚI THIỆU
+1.1 
+ĐẶT VẤN ĐỀ
+Trong kỷ nguyên chuyển đổi số và sự bùng nổ của kiến trúc vi dịch vụ, tốc độ triển khai phần mềm ra thị trường đóng vai trò quyết định đến sự thành bại của một doanh nghiệp công nghệ. Việc vận hành, quản lý hạ tầng và triển khai ứng dụng theo phương thức truyền thống đang bộc lộ nhiều hạn chế lớn. Nhà phát triển phần mềm thường phải phụ thuộc hoàn toàn vào đội ngũ vận hành hệ thống (Sys
+Admin doanh nghiệp
+/DevOps) mỗi khi muốn tạo môi trường thử nghiệm, cấp phát tài nguyên hay tung ra một phiên bản mới. Điều này gây ra sự đình trệ nghiêm trọng trong quy trình làm việc, kéo dài thời gian hoàn thiện sản phẩm và tăng chi phí vận hành.
+Mô hình Nền tảng phát triển nội bộ (IDP) ra đời nhằm giải quyết triệt để vấn đề trên bằng cách cung cấp cơ chế tự phục vụ. Thay vì phải tự tay thiết lập Docker, cấu hình máy chủ Nginx, gia hạn chứng chỉ bảo mật hay kết nối thủ công các cơ sở dữ liệu, nhà phát triển có thể tự thực hiện tất cả các thao tác này chỉ với vài cú nhấp chuột trực tiếp trên bảng điều khiển.
+Đề tài "Xây dựng nền tảng phát triển nội bộ Potato" được nghiên cứu nhằm tạo ra một hệ thống IDP thân thiện, an toàn và tự động hóa cao. Với thông điệp "gieo mầm dự án dễ dàng như trồng khoai tây", Potato hỗ trợ lập trình viên tự động triển khai ứng dụng từ mã nguồn Git, thiết lập giới hạn tài nguyên phần cứng, cấu hình tự động mở rộng quy mô, quản lý các cơ sở dữ liệu phụ trợ theo yêu cầu và thiết lập cơ chế cảnh báo thời gian thực. Hệ thống này giúp giảm tải áp lực cho đội ngũ DevOps, đồng thời trao quyền tối đa cho lập trình viên làm chủ toàn bộ vòng đời ứng dụng của mình.
+1.2 
+NHỮNG THỬ THÁCH CẦN GIẢI QUYẾT
+Để xây dựng nền tảng phát triển nội bộ Potato vận hành tự động, an toàn và có khả năng chịu tải tốt trên môi trường máy chủ vật lý, đề tài cần tập trung giải quyết các thử thách kỹ thuật lớn sau:
+Tự động hóa quy trình triển khai ứng dụng: Thiết lập cơ chế tự động lấy mã nguồn từ kho lưu trữ Git, tự động tạo lập môi trường chạy ứng dụng tương ứng và quản lý vòng đời hoạt động của các Container Docker một cách an toàn.
+Định tuyến động và cấp phát chứng chỉ bảo mật tự động: Tự động hóa cấu hình điều hướng máy chủ Nginx mỗi khi một dự án mới được tạo ra hoặc khởi chạy, đồng thời tích hợp cơ chế tự động kích hoạt và gia hạn chứng chỉ bảo mật (SSL) cho các tên miền phụ của hệ thống hoặc tên miền riêng của người dùng.
+Quản lý tài nguyên và giám sát thời gian thực: Thu thập liên tục các chỉ số tài nguyên phần cứng (tỷ lệ sử dụng CPU, dung lượng RAM tiêu thụ) từ các Container đang chạy thông qua API của Docker và hiển thị trực quan dưới dạng biểu đồ theo thời gian thực để người dùng giám sát hệ thống.
+Cung cấp cơ sở dữ liệu tự động: Thiết lập quy trình khởi tạo tự động các hệ quản trị cơ sở dữ liệu phổ biến (như PostgreSQL, MySQL) dưới dạng các Container độc lập, tự động cấp phát cổng kết nối mạng ngẫu nhiên và bảo mật chuỗi kết nối.
+Sao lưu và khôi phục dữ liệu: Tự động hóa quy trình nén, sao lưu cơ sở dữ liệu định kỳ hằng ngày và hỗ trợ người dùng khôi phục dữ liệu nhanh chóng từ các bản sao lưu có sẵn để tránh thất thoát thông tin.
+Mô hình cô lập đa doanh nghiệp: Đảm bảo tính cô lập dữ liệu tuyệt đối giữa các tổ chức, doanh nghiệp khác nhau trên cùng hệ thống. Nhân viên và dự án của doanh nghiệp này hoàn toàn không thể nhìn thấy hoặc can thiệp chéo sang tài nguyên của doanh nghiệp khác.
+Quản lý hạn mức tài nguyên nghiêm ngặt: Xây dựng cơ chế kiểm tra và giới hạn tài nguyên tại đầu vào (chủ động chặn tạo mới hoặc hủy tiến trình khởi chạy ứng dụng nếu tổng lượng RAM cần dùng vượt quá hạn mức tối đa mà doanh nghiệp được cấp).
+Cơ chế phân quyền động theo vai trò: Thiết kế mô hình gán quyền tập trung, cho phép Quản trị viên tự tạo các vai trò tùy biến và phân quyền chi tiết cho lập trình viên tham gia dự án (như quyền đọc nhật ký hệ thống, quyền triển khai ứng dụng, quyền chỉnh sửa biến môi trường...).
+1.3 NỘI DUNG, PHẠM VI THỰC HIỆN
+Hệ thống Potato được cài đặt trực tiếp trên máy chủ ảo (VPS) của tổ chức, phục vụ cho 3 nhóm đối tượng người dùng chính tham gia vận hành và sử dụng:
+1.3
+.1 Quản trị
+ viên
+ tối cao (
+Super Admin
+)
+Super Admin
+ là chủ sở hữu máy chủ VPS, chịu trách nhiệm quản trị hệ thống ở mức cao nhất, đảm bảo tính toàn vẹn và hiệu năng tổng thể của toàn bộ VPS.
+1.3.1.1 
+Đăng nhập
+Truy cập vào giao diện quản trị đặc quyền thông qua cơ chế đăng nhập bảo mật bằng mã thông báo (JWT) có thời gian sống ngắn, hoàn toàn độc lập với các tài khoản doanh nghiệp
+1.3.1.2 
+Quản lý tài khoản
+ doanh nghiệp 
+Quản lý toàn bộ vòng đời của các tài khoản doanh nghiệp đăng ký sử dụng chung máy chủ: Xem danh sách các doanh nghiệp, tạo mới doanh nghiệp (cấp tài khoản quản trị ban đầu), cập nhật thông tin, tạm khóa hoặc xóa dữ liệu của một doanh nghiệp.
+1.3.1.3 
+Quản 
+trị và cấp phát Quota tài nguyên
+ VPS
+Thiết lập giới hạn tài nguyên phần cứng cho từng doanh nghiệp: Giới hạn tổng dung lượng RAM được phép phân bổ cho các ứng dụng (ví dụ: tối đa 2GB, 4GB RAM), dung lượng ổ cứng tối đa cho phân vùng lưu trữ, số lượng dự án tối đa được phép tạo và số lượng cơ sở dữ liệu tối đa được khởi tạo.
+1.3.1.4 
+Giám sát tài nguyên máy chủ VPS tổng t
+hể
+Theo dõi hiệu năng thực tế của máy chủ. 
+Super Admin
+ được cung cấp các biểu đồ trực quan theo thời gian thực về: Tỷ lệ sử dụng CPU tổng, dung lượng RAM đã dùng và còn trống, dung lượng đĩa cứng đã tiêu thụ và lưu lượng băng thông mạng truyền tải.
+.
+1.3
+.2 
+Quản trị viên doanh nghiệp
+Quản trị viên doanh nghiệp là đại diện tổ chức được cấp phát một phần hạn mức tài nguyên trên máy chủ, chịu trách nhiệm quản lý nhân sự lập trình viên và phân phối tài nguyên nội bộ trong phạm vi được cho phép.
+1.3.2.1 
+Đăng nhập
+Truy cập vào bảng điều khiển nghiệp vụ nội bộ của doanh nghiệp mình. Giao diện hiển thị các thông tin tài nguyên thuộc phạm vi cô lập của riêng doanh nghiệp đó.
+1.3.2.2 
+Quản lý 
+tài khoản nhân viên nội bộ
+Tạo mới tài khoản đăng nhập cho lập trình viên trực thuộc doanh nghiệp. Khi Quản trị viên tạo tài khoản nhân viên mới từ giao diện, 
+hệ thống sẽ tự động gán mã định danh của doanh nghiệp vào tài khoản của nhân viên để thiết lập liên kết cô lập. Quản trị viên cũng có quyền chỉnh sửa thông tin nhân viên, đổi mật khẩu hoặc xóa tài khoản của nhân viên đó.
+1.3.2.3 
+Quản lý
+ 
+vai trò tùy biến động
+ 
+Admin doanh nghiệp
+ có quyền tự định nghĩa các vai trò nghiệp vụ động cho nhân viên của mình thay vì sử dụng các vai trò hệ thống cứng. 
+Admin doanh nghiệp
+ có thể tạo vai trò mới (ví dụ: "DevOps", "QA Tester", "Intern Developer") và tích chọn tập hợp các quyền cụ thể (như project:deploy, env:write, database:manage) được phép thực hiện trên các tài nguyên được phân công.
+1.3.2.4 
+Quản lý
+ thành viên dự án tập trung
+ 
+Admin doanh nghiệp
+ quản trị tập trung việc gán dự án cho nhân viên ngay trên màn hình quản lý tài khoản. Khi chỉnh sửa thông tin một nhân viên, 
+Admin doanh nghiệp
+ được cung cấp danh sách Checkbox hiển thị toàn bộ các dự án hiện có của công ty trên VPS. 
+Admin doanh nghiệp
+ chỉ cần tích chọn các dự án muốn nhân viên đó tham gia, backend sẽ tự động đồng bộ hóa bản ghi liên kết , cho phép nhân viên truy cập vào các dự án tương ứng.
+1.3.2.5 
+Giám sát tài nguyên và Quota tiêu thụ
+Theo dõi lượng tài nguyên đã phân bổ nội bộ. Giao diện hiển thị các thanh đo trạng thái trực quan bao gồm: Tổng số dự án đã tạo trên mức tối đa, số lượng cơ sở dữ liệu đã dùng trên mức tối đa, và tổng dung lượng RAM của các ứng dụng đang chạy so với hạn mức RAM tối đa mà doanh nghiệp được cấp.
+1.3.3
+ 
+Nhân viên / Lập trình viên
+Lập trình viên là người dùng cuối trực tiếp thao tác trên các ứng dụng và cơ sở dữ liệu chạy trên VPS được 
+Admin doanh nghiệp
+ phân quyền giao việc.
+1.3.3.1 
+Đăng
+ nhập
+Đăng nhập vào hệ thống để tiếp cận không gian làm việc cá nhân. Lập trình viên chỉ nhìn thấy và được phép tương tác với các dự án và cơ sở dữ liệu
+.
+1.3.3.2 
+Triển khai dự án tự động
+Thực hiện triển khai ứng dụng lên VPS thông qua việc liên kết kho lưu trữ Git. Người dùng chỉ cần nhập URL Git, chọn nhánh cần deploy. Hệ thống sẽ tự động kích hoạt tiến trình chạy ngầm trên VPS: kéo mã nguồn, build Docker image, cấu hình cổng mạng và khởi chạy container. Đồng thời, hỗ trợ xem lịch sử deploy và thực hiện khôi phục (Rollback) nhanh về bản build cũ hơn khi bản build mới gặp lỗi
+.
+1.3.3.3 
+Quản lý biến môi trường dự án
+Quản trị danh sách các biến cấu hình ứng dụng (.env). Người dùng có thể thêm mới, cập nhật giá trị hoặc xóa bỏ các biến môi trường này. Đối với các biến nhạy cảm (như API Key, Database Password), hệ thống hỗ trợ chế độ mã hóa bí mật (Secret), các giá trị này sẽ bị ẩn đi trên giao diện Web và được mã hóa bảo mật khi lưu vào database.
+1.3.3.4 
+Kiểm soát trạng thái container
+Điều khiển trạng thái chạy thực tế của container ứng dụng trên VPS. Các thao tác bao gồm: Khởi chạy, dừng, khởi động lại container để áp dụng cấu hình mới. Đặc biệt, hệ thống hỗ trợ tính năng Ngủ đông : Container sẽ được dừng hoàn toàn để giải phóng 100% dung lượng RAM chiếm dụng trên máy chủ VPS, giúp tiết kiệm tài nguyên khi dự án tạm thời chưa cần chạy hoạt động.
+1.3.3.5
+ 
+Xem nhật ký và thông số container thời gian thực
+Theo dõi trực quan hiệu năng hoạt động của 
+dự án
+. Hệ thống cung cấp một Terminal Logs tích hợp cho phép stream trực tiếp logs xuất ra từ container thông qua kết nối WebSocket/SSE để lập trình viên dễ dàng debug lỗi. Đồng thời, biểu đồ hiển thị thời gian thực tỷ lệ sử dụng CPU và lượng RAM tiêu thụ của container 
+dự án
+ đó trên VPS
+.
+1.3.3.6 
+Quản lý và khởi tạo Cơ sở dữ liệu tự động
+Khởi tạo nhanh các cơ sở dữ liệu độc lập (như PostgreSQL, MySQL) để phục vụ cho ứng dụng. Lập trình viên chỉ cần chọn loại cơ sở dữ liệu, hệ thống sẽ tự động tạo phân vùng Docker riêng biệt, ánh xạ ổ đĩa lưu trữ lâu dài, tự động tạo tài khoản quản trị với mật 
+khẩu ngẫu nhiên có độ phức tạp cao, và sinh chuỗi kết nối bảo mật để lập trình viên sử dụng
+1.3.3.7 
+Sao 
+lưu
+ và khôi phục cơ sở dữ liệu
+Thực hiện quản trị an toàn dữ liệu cho các cơ sở dữ liệu đang chạy. Người dùng có thể bấm nút kích hoạt sao lưu thủ công hoặc xem danh sách các bản sao lưu cũ đã tạo tự động. Khi xảy ra sự cố, lập trình viên có thể chọn một bản sao lưu trong lịch sử và thực hiện Restore hệ thống về đúng thời điểm đó chỉ với một thao tác nhấp chuột.
+1.3.3.8 
+Thực thi truy vấn trực tuyến
+Tích hợp trình thực thi truy vấn trực tiếp trên giao diện quản trị. Đối với các cơ sở dữ liệu quan hệ, lập trình viên có thể viết các câu lệnh truy vấn dữ liệu và xem trực tiếp bảng kết quả trả về ngay trên giao diện web mà không cần sử dụng các phần mềm kết nối bên ngoài.
+1.4 
+KẾT QUẢ CẦN ĐẠT
+Nền tảng phát triển nội bộ Potato sau khi hoàn thành toàn bộ quy trình thiết kế, phát triển và thử nghiệm thực tế trên máy chủ cần đạt được các mục tiêu kết quả chất lượng sau đây:
+1.
+4.1
+ 
+Kết quả chức năng hệ thống (Mô-đun phần mềm)
+Cổng xác thực an toàn: Đăng nhập, đăng ký và xác thực tài khoản đa đối tượng hoạt động ổn định. Cơ chế mã hóa mật khẩu và quản lý phiên bảo mật tuyệt đối, ngăn chặn tấn công giả mạo.
+Tự động hóa triển khai từ Git: Quá trình triển khai tự động từ kho mã nguồn Git lên Docker hoạt động trơn tru. Hệ thống tự động biên dịch, đóng gói và chạy ứng dụng đúng cổng cấu hình mạng.
+Định tuyến động: Hệ thống điều hướng Nginx tự động hóa việc ghi đè tập tin cấu hình và tải lại dịch vụ thành công, chuyển tiếp chính xác lưu lượng truy cập từ Internet vào ứng dụng thông qua các tên miền phụ được chỉ định.
+Cấp phát cơ sở dữ liệu tự động: Khởi tạo các cơ sở dữ liệu (PostgreSQL, MySQL) thành công chỉ trong thời gian dưới 1 phút. Cơ chế cấp phát cổng ngẫu nhiên hoạt động chính xác, không bị trùng lặp.
+Tính năng sao lưu và Restore: Sao lưu cơ sở dữ liệu nén thành công và lưu trữ an toàn trên ổ cứng. Quy trình Restore dữ liệu hoạt động chính xác, đảm bảo tính toàn vẹn dữ liệu gốc.
+Giám sát CPU/RAM thực tế: Biểu đồ và màn hình nhật ký truyền tải dữ liệu theo thời gian thực liên tục qua các kết nối mạng tốc độ cao với độ trễ phản hồi dưới 1 giây.
+1.4.2 Kết quả kỹ thuật và phi chức năng
+ 
+Tính cô lập bảo mật đa doanh nghiệp: Các điểm truy cập dữ liệu (API) ở máy chủ Backend được bảo vệ tuyệt đối. Đảm bảo dữ liệu của doanh nghiệp này (nhân viên, dự án, cơ sở dữ liệu, nhật ký...) hoàn toàn cô lập khỏi doanh nghiệp khác. Hành vi truy cập trái phép hoặc chỉnh sửa chéo tài nguyên giữa các doanh nghiệp đều bị hệ thống phát hiện và từ chối.
+Tính chính xác của hệ thống kiểm soát hạn mức: Hệ thống kiểm soát và chặn đứng các hành động tạo mới dự án, cơ sở dữ liệu hay khởi chạy ứng dụng nếu tổng lượng tài nguyên thực tế doanh nghiệp sử dụng vượt quá giới hạn được cấp. Đảm bảo tính ổn định và tránh làm cạn kiệt tài nguyên gây treo máy chủ vật lý.
+Độ ổn định của phân quyền theo vai trò: Các vai trò tùy biến hoạt động chính xác tuyệt đối. Hệ thống kiểm soát quyền chặt chẽ ở cấp độ điểm truy cập API: Chặn hành động của người dùng nếu vai trò được gán cho người dùng đó thiếu quyền tương ứng.
+Trải nghiệm giao diện và hiệu năng:
+Giao diện quản trị được xây dựng theo phong cách thiết kế hiện đại, bố cục rõ ràng, tạo ấn tượng chuyên nghiệp cao.
+Trải nghiệm quản lý phân quyền tập trung và trực quan (tích hợp danh sách chọn dự án trực tiếp vào cửa sổ sửa tài khoản) giúp quản lý nhân sự một cách dễ dàng nhất.
+Hệ thống tải trang nhanh, thời gian phản hồi API trung bình dưới 1,2 giây đối với các tác vụ thông thường. Giao diện có khả năng thích ứng hoàn hảo trên các kích thước màn hình thiết bị từ điện thoại di động đến máy tính để bàn.
+Chương
+ 
+2.
+ PHƯƠNG PHÁP THỰC HIỆN
+2.1 
+CÁC HỆ THỐNG 
+TƯƠNG
+ TỰ
+Hình 2-1:
+ Giao diện chính trang
+ Render.com
+Hình 2-2:
+ Giao diện 
+cấu hình kết nối kho chứa G
+it
+Hình 2-3:
+ Giao diện 
+xem Nhật ký Logs
+Hình 2-4:
+ Giao diện 
+ quản lý các biến môi trường
+Hình 2-5:
+ Giao diện 
+khởi tạo nhanh cơ sở dữ liệ
+u
+Ưu điểm: 
+Triển khai Git tự động (Auto-deploy): Tự động theo dõi các thay đổi trên kho chứa Git của lập trình viên và tự động build/chạy phiên bản mới mỗi khi có commit mới.
+Giao diện trực quan và thân thiện: Thiết kế đơn giản hóa tối đa các thông số kỹ thuật hạ tầng phức tạp, giúp lập trình viên không chuyên về DevOps vẫn có thể vận hành tốt.
+Tự động hóa cấu hình proxy ngược và SSL: Tự cấp phát tên miền con định tuyến và chứng chỉ SSL bảo mật Let's Encrypt ngay khi ứng dụng khởi chạy thành công.
+Quản trị biến môi trường tốt: Cho phép lưu trữ và ẩn (che) các thông tin nhạy cảm của biến cấu hình một cách dễ dàng.
+Nhược điểm:
+Chi phí vận hành tăng lũy tiến: Mặc dù cung cấp gói dùng thử giới hạn, Render.com tính phí khá đắt khi ứng dụng cần mở rộng tài nguyên phần cứng (RAM, CPU) hoặc tăng dung lượng băng thông.
+Thiếu khả năng cài đặt On-Premise: Do chạy hoàn toàn dưới dạng Public Cloud, Render không cho phép doanh nghiệp tự tải hệ thống của họ về và cài đặt trên máy chủ ảo VPS riêng nhằm bảo mật dữ liệu nhạy cảm nội bộ.
+Thiếu cơ chế phân quyền đa doanh nghiệp (SaaS Multi-Tenancy) và Quota nội bộ: Render không hỗ trợ doanh nghiệp tự quản trị và gán hạn mức tài nguyên phần cứng VPS cho nhân viên của mình. Doanh nghiệp bắt buộc phải mua tài khoản nhóm (Team account) với chi phí tính trên mỗi lập trình viên tham gia.
+2.2 
+CÔNG NGHỆ SỬ DỤNG
+2.2.1 Node.js và NestJS Framework (Phần Backend)
+Node.js: Nền tảng chạy mã JavaScript phía máy chủ, được xây dựng trên lõi Chrome V8. Việc sử dụng mô hình xử lý vào/ra bất đồng bộ giúp hệ thống có khả năng xử lý hàng ngàn yêu cầu truy cập đồng thời với mức tiêu hao bộ nhớ rất thấp.
+NestJS: Một bộ khung phần mềm (framework) chạy trên nền tảng Node.js, được viết hoàn toàn bằng ngôn ngữ TypeScript. NestJS cung cấp một kiến trúc hệ thống chuẩn mực (theo mô hình Module - Controller - Service) lấy cảm hứng từ Angular, giúp mã nguồn dễ bảo trì và mở rộng. Nó cũng tích hợp 
+sẵn các cơ chế tiêm phụ thuộc, kiểm tra tính hợp lệ của dữ liệu đầu vào và các chốt chặn bảo mật để phân quyền chặt chẽ.
+2.2.2 Next.js và TailwindCSS (Phần Frontend)
+Next.js: Bộ khung phát triển giao diện dựa trên thư viện React rất phổ biến hiện nay. Nó cho phép kết xuất mã HTML trực tiếp từ máy chủ hoặc tĩnh hóa toàn bộ trang web, hỗ trợ tối ưu hóa hiệu năng tải trang ban đầu và tự động điều hướng cấu trúc trang web dựa trên cấu trúc thư mục.
+TailwindCSS: Thư viện định kiểu giao diện theo hướng tiện ích, giúp thiết kế giao diện nhanh chóng và linh hoạt trực tiếp bên trong mã HTML. Kết hợp với các thư viện giao diện hiện đại như Shadcn UI và Framer Motion, hệ thống mang lại một bảng điều khiển quản trị tương thích tốt trên nhiều kích thước màn hình thiết bị khác nhau, đem đến trải nghiệm tối giản và hiện đại.
+2.2.3 Prisma ORM và PostgreSQL (CSDL Hệ thống)
+PostgreSQL: Hệ quản trị cơ sở dữ liệu quan hệ mã nguồn mở mạnh mẽ, nổi tiếng với độ tin cậy, tính toàn vẹn dữ liệu cao và hỗ trợ rất tốt các thao tác truy vấn phức tạp. Trong hệ thống này, PostgreSQL đóng vai trò lưu trữ toàn bộ dữ liệu cấu hình cốt lõi (bao gồm thông tin tài khoản, danh sách doanh nghiệp, nhật ký hoạt động, thông tin cấu hình dự án và các chuỗi kết nối).
+Prisma ORM: Công cụ ánh xạ dữ liệu quan hệ thế hệ mới dành cho Node.js và TypeScript. Prisma tự động tạo ra các kiểu dữ liệu an toàn dựa trên tập tin định nghĩa cấu trúc dữ liệu, giúp lập trình viên viết mã truy vấn cơ sở dữ liệu nhanh chóng, hạn chế tối đa các lỗi cú pháp hoặc lỗi truyền sai kiểu dữ liệu.
+2.2.4 Docker Engine API (Hạ tầng ảo hóa)
+Docker: Công nghệ ảo hóa cấp độ hệ điều hành, cho phép đóng gói ứng dụng và toàn bộ môi trường hoạt động của nó vào một gói độc lập, đảm bảo ứng dụng luôn chạy đồng nhất trên mọi môi trường máy chủ vật lý.
+Docker Engine API: Giao diện lập trình ứng dụng do lõi Docker cung cấp trên máy chủ. Máy chủ trung tâm của Potato kết nối với Docker API thông qua cổng giao tiếp cục bộ mặc định để thực thi các tác vụ hạ tầng từ xa một cách hoàn toàn tự động, bao gồm: đóng gói ứng dụng mới, thiết lập giới hạn RAM và CPU, khởi chạy, dừng, khởi động lại, đưa ứng dụng vào trạng thái ngủ đông, thu thập chỉ số tiêu thụ phần cứng và truy xuất trực tiếp nhật ký đầu ra của ứng dụng đó.
+2.2.5 Nginx Reverse Proxy và SSL Let's Encrypt (Định tuyến & Bảo mật)
+Nginx: Máy chủ web và máy chủ điều hướng ngược có hiệu năng cực cao, sử dụng kiến trúc hướng sự kiện để xử lý lượng kết nối khổng lồ. Trong hệ thống này, Nginx chạy trên máy chủ vật lý nhận các yêu cầu truy cập từ Internet, sau đó dựa vào cấu hình tên miền phụ động do máy chủ trung tâm tự tạo ra để điều hướng yêu cầu truy cập đến đúng cổng mạng của dự án tương ứng.
+Let's Encrypt & Certbot: Tổ chức cấp phát chứng chỉ bảo mật miễn phí Let's Encrypt kết hợp với công cụ Certbot chạy ngầm trên máy chủ để tự động hóa quá trình xác thực quyền sở hữu tên miền, tự động tải về chứng chỉ bảo mật và cấu hình lớp bảo vệ dữ liệu truyền tải cho tất cả ứng dụng của người dùng.
+2.3 
+PHÂN TÍCH YÊU CẦU
+Nền tảng Potato Platform hoạt động như một hệ quản trị VPS thông minh dành cho lập trình viên và doanh nghiệp. Để thiết kế hệ thống chính xác, đề tài tiến hành phân tích các quy trình nghiệp vụ cốt lõi và phân rã các yêu cầu chức năng.
+ 
+2.3.1 Các quy trình, nghiệp vụ
+2.3.1.1 Quy trình 
+Triển khai ứng dụng tự động
+Hình 
+2
+-
+6
+:
+ Quy trình 
+Triển khai ứng dụng tự động
+2.3.1.
+2
+ Quy trình 
+Khởi tạo Cơ sở dữ liệu tự động
+Hình 2-
+7
+:
+ Quy trình 
+Khởi tạo Cơ sở dữ liệu tự động
+2.3.1.
+3
+ Quy trình 
+Kiểm soát Quota RAM khi Khởi chạy 
+Dự án (Plot)
+Hình 2-
+8
+:
+ Quy trình 
+Kiểm soát Quota RAM khi Khởi chạy 
+Dự án
+2.3.1.4 
+Quy trình Cảnh báo sự cố qua Slack (Slack Alert)
+Hình 2-
+9
+:
+ 
+Quy trình Cảnh báo sự cố qua Slack (Slack Alert)
+2.3.2 Sơ đồ chức năng
+Hình 2-
+10
+:
+ Sơ đồ chức năng của trang web
+2.3.3 Sơ đồ Use case tổng quát
+Hình 2-
+11
+:
+ Use case tổng quát của trang web
+Chương
+ 
+3
+.
+ THIẾT KẾ
+3.1 
+MÔ HÌNH 
+XỬ LÝ
+ 
+Hình 3-1:
+ Mô hình dữ liệu mức vật lý
+Bảng User
+ 
+(Người dùng và Doanh nghiệp)
+:
+Mô tả : 
+Bảng này dùng để lưu trữ thông tin tài khoản của các tác nhân (Super Admin, Enterprise Admin, Developer) và các thông số Quota giới hạn tài nguyên của hệ thống.
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+id
+Int (11)
+x
+x
+Khóa chính tự tăng
+email
+Varchar (255)
+x
+x
+Email đăng nhập của người dùng
+password
+Varchar (255)
+x
+Mật khẩu tài khoản (đã mã hóa bcrypt)
+name
+Varchar (255)
+Tên hiển thị của người dùng
+role
+Varchar (50)
+x
+Vai trò hệ thống mặc định (ADMIN / DEVELOPER)
+parentId
+Int (11)
+x
+Khóa ngoại trỏ đến Admin doanh nghiệp quản lý
+customRoleId
+Int (11)
+x
+Khóa ngoại trỏ đến bảng CustomRole
+maxRam
+Int (11)
+x
+Hạn mức RAM tối đa được cấp phát (MB)
+maxDisk
+Int (11)
+x
+Hạn mức dung lượng ổ đĩa tối đa (GB)
+maxProjects
+Int (11)
+x
+Số lượng dự án (Project) tối đa được tạo
+maxDatabases
+Int (11)
+x
+Số lượng cơ sở dữ liệu tối đa được tạo
+createdAt
+DateTime
+x
+Thời gian khởi tạo tài khoản
+Bảng 
+ CustomRole (Vai trò tùy biến)
+:
+Mô tả : 
+Bảng này lưu trữ các vai trò nghiệp vụ động do Admin tự thiết lập cùng danh sách các quyền hạn được cấp.
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+id
+Int (11)
+x
+x
+Khóa chính tự tăng
+name
+Varchar (255)
+x
+x
+Tên của vai trò tùy biến (ví dụ: DevOps, QA...)
+permissions
+StringArray
+x
+Mảng danh sách các mã quyền hạn chi tiết
+assignableByManager
+Boolean
+x
+Trạng thái cho phép Manager gán vai trò
+ownerId
+Int (11)
+x
+Khóa ngoại trỏ đến Admin sở hữu vai trò
+createdAt
+DateTime
+x
+Thời gian tạo vai trò
+Bảng 
+Project (Dự án)
+:
+Mô tả : 
+Bảng trung tâm lưu trữ thông tin cấu hình, tài nguyên và trạng thái CI/CD của container ứng dụng.
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+id
+Int (11)
+x
+x
+Khóa chính tự tăng
+name
+Varchar (255)
+x
+Tên hiển thị của dự án
+containerId
+Varchar (100)
+ID của Docker Container đang chạy
+status
+Varchar (50)
+x
+Trạng thái container (stopped, running...)
+ramLimit
+Int (11)
+x
+Giới hạn dung lượng RAM cấu hình (MB)
+cpuLimit
+Float
+x
+Giới hạn tài nguyên CPU cấu hình
+hostPort
+Int (11)
+Cổng mạng vật lý trên VPS cấp cho dự án
+subdomain
+Varchar (255)
+x
+x
+Tên miền con mặc định định tuyến đến dự án
+customDomain
+Varchar (255)
+x
+Tên miền riêng do người dùng cấu hình
+sslStatus
+Varchar (50)
+x
+Trạng thái chứng chỉ SSL (none, active...)
+sslExpiry
+DateTime
+Thời gian hết hạn của chứng chỉ SSL
+gitRepo
+Varchar (255)
+Đường dẫn kho chứa mã nguồn Git
+deployBranch
+Varchar (100)
+Nhánh Git được chọn để tự động triển khai
+gitToken
+Varchar (255)
+Access Token để kéo code từ kho Private
+deployStatus
+Varchar (50)
+Trạng thái CI/CD (idle, deploying, success...)
+lastDeployedAt
+DateTime
+Thời gian thực hiện Deploy gần nhất
+restartPolicy
+Varchar (50)
+x
+Cấu hình tự động khởi động lại container
+autoScale
+Boolean
+x
+Cho phép hệ thống tự động co giãn tài nguyên
+notificationsEnabled
+Boolean
+x
+Bật/tắt tính năng gửi cảnh báo qua Slack
+volumeMapping
+Varchar (255)
+Đường dẫn ánh xạ ổ đĩa liên tục (Volume)
+slackWebhook
+Varchar (255)
+URL Webhook để gửi cảnh báo qua ứng dụng Slack
+alertInterval
+Int (11)
+x
+Thời gian chờ giữa các lần gửi cảnh báo (phút)
+userId
+Int (11)
+x
+x
+Khóa ngoại trỏ đến người tạo (Owner) dự án
+createdAt
+DateTime
+x
+Thời gian khởi tạo dự án
+Bảng
+ 
+ProjectMember (Thành viên dự án)
+:
+Mô tả : 
+Bảng trung gian phân công lập trình viên tham gia quản trị dự án cụ thể.
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+i
+d
+Int (11)
+x
+x
+Khóa chính tự tăng
+userId
+Int (11)
+x
+x
+Khóa ngoại trỏ đến nhân viên (Developer)
+projectId
+Int (11)
+x
+x
+Khóa ngoại trỏ đến Dự án
+role
+Varchar (50)
+x
+Vai trò nội bộ dự án (VIEWER / DEVELOPER / LEADER)
+permissions
+StringArray
+x
+Các quyền hạn nội bộ được ghi đè
+createdAt
+DateTime
+x
+Thời gian thêm thành viên vào dự án
+Bảng EnvVariable (Biến môi trường)
+Mô tả: Bảng lưu trữ cấu hình các biến môi trường (.env) được nạp vào container khi khởi chạy dự án.
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+id
+Int (11)
+x
+x
+Khóa chính tự tăng
+key
+Varchar (255)
+x
+Tên biến môi trường (ví dụ: DB_HOST, PORT)
+value
+Text
+x
+Giá trị của biến môi trường
+isSecret
+Boolean
+x
+Đánh dấu biến bảo mật (ẩn khỏi giao diện)
+projectId
+Int (11)
+x
+x
+Khóa ngoại trỏ đến Dự án sở hữu
+createdAt
+DateTime
+x
+Thời gian tạo biến môi trường
+Bảng DeploymentLog (Lịch sử Triển khai)
+Mô tả: Bảng ghi nhận lại toàn bộ nhật ký các lần Build và Deploy (CI/CD) của dự án.
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+i
+d
+Int (11)
+x
+x
+Khóa chính tự tăng
+projectId
+Int (11)
+x
+x
+Khóa ngoại trỏ đến Dự án được deploy
+trigger
+Varchar (50)
+x
+Nguồn kích hoạt deploy (manual, git-push)
+status
+Varchar (50)
+x
+Trạng thái tiến trình (pending, success, failed)
+gitCommit
+Varchar (100)
+Mã băm (Hash) của commit code được kéo về
+gitMessage
+Varchar (255)
+Lời nhắn commit tương ứng từ Git
+duration
+Int (11)
+Tổng thời gian thực thi tiến trình (giây)
+log
+Text
+Toàn văn log console (stdout/stderr) khi build code
+createdAt
+DateTime
+x
+Thời gian bắt đầu tiến trình deploy
+Bảng ActivityLog (Nhật ký Hoạt động)
+Mô tả: Bảng theo dõi và kiểm toán (Audit) các thao tác quan trọng mà người dùng thực hiện lên dự án.
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+id
+Int (11)
+x
+x
+Khóa chính tự tăng
+projectId
+Int (11)
+x
+x
+Khóa ngoại trỏ đến Dự án chịu tác động
+type
+Varchar (50)
+x
+Phân loại thao tác (START, STOP, RESTART...)
+message
+Varchar (255)
+x
+Nội dung diễn giải thao tác
+createdAt
+DateTime
+x
+Thời điểm ghi nhận thao tác
+Bảng ProjectStat (Thống kê Tài nguyên)
+Mô tả: Bảng lưu trữ dữ liệu giám sát tài nguyên định kỳ để phục vụ vẽ biểu đồ Metrics (Monitoring).
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+id
+Int (11)
+x
+x
+Khóa chính tự tăng
+projectId
+Int (11)
+x
+x
+Khóa ngoại trỏ đến Dự án được giám sát
+cpuUsage
+Float
+x
+Phần trăm CPU tiêu thụ tại thời điểm đo
+ramUsage
+Float
+x
+Dung lượng RAM tiêu thụ tại thời điểm đo (MB)
+createdAt
+DateTime
+x
+Thời điểm lấy mẫu dữ liệu thống kê
+Bảng DatabaseActivityLog (Lịch sử hoạt động CSDL)
+Mô tả: Bảng quản lý chi tiết lịch sử các bản sao lưu (Backup), phục hồi (Restore) và các thao tác trên CSDL.
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+id
+Int (11)
+x
+x
+Khóa chính tự tăng
+databaseId
+Int (11)
+x
+x
+Khóa ngoại trỏ đến cơ sở dữ liệu bị tác động
+action
+Varchar (50)
+x
+Phân loại thao tác (BACKUP, RESTORE, CHANGE_PASSWORD)
+filename
+Varchar (255)
+Tên file sao lưu vật lý (.sql.gz) nếu là thao tác Backup
+status
+Varchar (50)
+x
+Trạng thái thao tác (completed, failed)
+message
+Text
+Ghi chú thêm hoặc báo lỗi (nếu có)
+createdAt
+DateTime
+x
+Thời gian thực hiện thao tác
+Bảng DatabaseInstance (Cơ sở dữ liệu)
+Mô tả: Bảng lưu trữ thông tin kết nối của các container cơ sở dữ liệu phụ trợ (Redis, Postgres...) được cấp phát riêng.
+Thuộc tính
+Kiểu
+K
+U
+M
+F
+Diễn giải
+id
+Int (11)
+x
+x
+Khóa chính tự tăng
+name
+Varchar (255)
+x
+Tên định danh của CSDL
+type
+Varchar (50)
+x
+Loại hệ quản trị CSDL (POSTGRESQL, MYSQL, REDIS...)
+status
+Varchar (50)
+x
+Trạng thái container DB (provisioning, running...)
+connectionString
+Text
+Chuỗi URL kết nối CSDL (đã mã hóa thông tin xác thực)
+projectId
+Int (11)
+x
+x
+Khóa ngoại trỏ đến Dự án liên kết CSDL này
+createdAt
+DateTime
+x
+Thời gian khởi tạo CSDL
+3.2 
+MÔ HÌNH XỬ LÝ
+3.2.1 Use case chi tiết
+3.2.1.1 
+Use case đăng nhập:
+Hình 3-2
+:
+ Use case đăng nhập
+ 
+Bảng 3-1: Mô tả Use case đăng nhập 
+Tên Use case
+Đăng nhập 
+Actor
+Super Admin
+, 
+Admin doanh nghiệp
+, Lập trình viên
+Mô tả 
+Use case cho phép người dùng đăng nhập vào hệ thống để truy cập vào không gian làm việc (Workspace) tương ứng với vai trò của mình.
+Điều kiện
+Sau khi kết thúc
+Người dùng đăng nhập thành công, hệ thống cấp phát Token và chuyển hướng đến trang Dashboard.
+Luồng sự kiện chính
+1. Người dùng chọn chức năng Đăng nhập.
+2. Hệ thống hiển thị form đăng nhập.
+3. Người dùng nhập Email và Mật khẩu.
+4. Hệ thống kiểm tra tính hợp lệ của tài khoản và mật khẩu.
+5. Hệ thống khởi tạo và cấp phát JWT Token.
+6. Báo đăng nhập thành công và chuyển sang trang Dashboard.
+Luồng sự kiện phụ
+Rẽ nhánh ở bước 4:
+- Nhập sai Email hoặc Mật khẩu.
+-Hệ thống hiển thị thông báo "Thông tin đăng nhập không chính xác".
+- Người dùng nhập lại thông tin ở form đăng nhập.
+Chức năng khác: Người dùng nhấn "Quên mật khẩu", hệ thống chuyển sang trang lấy lại mật khẩu.
+3.2.1.
+2
+ 
+Use case đăng 
+ký
+ :
+Hình 3-
+3
+:
+ Use case đăng ký
+ 
+Bảng 3-
+2
+: Mô tả Use case đăng ký 
+Tên Use case
+Đăng ký 
+Actor
+Người dùng mới
+Mô tả 
+Use case cho phép người dùng chưa có tài khoản thực hiện đăng ký thông tin để tạo tài khoản mới trên hệ thống Potato IDP.
+Điều kiện
+Sau khi kết thúc
+Tài khoản được khởi tạo thành công, dữ liệu lưu vào CSDL và tự động đăng nhập.
+Luồng sự kiện chính
+1. Người dùng chọn chức năng Đăng ký.
+2. Hệ thống hiển thị form đăng ký.
+3. Người dùng nhập Tên, Email và Mật khẩu.
+4. Hệ thống kiểm tra Email đã tồn tại trong CSDL chưa.
+5. Mã hóa mật khẩu và tạo tài khoản lưu vào CSDL.
+6. Cấp phát JWT Token, báo thành công và chuyển hướng sang trang Dashboard
+Luồng sự kiện phụ
+Rẽ nhánh ở bước 4: 
+-
+Nếu Email đã tồn tại trong CSDL, hệ thống hiển thị thông báo "Email này đã được sử dụng". 
+-
+Người dùng nhập lại một Email khác.
+Chức năng khác: Người dùng chọn "Đã có tài khoản", hệ thống chuyển về trang Đăng nhập.
+3.2.1.3
+ Use case 
+Triển khai ứng dụng tự động (Git Deploy)
+Hình 3-
+4
+:
+ Use case 
+t
+riển khai ứng dụng tự động (Git Deploy)
+Bảng 3-
+3
+: Mô tả Use case 
+triển khai ứng dụng tự động (Git Deploy)
+Tên Use case
+T
+riển khai ứng dụng tự động (Git Deploy)
+Actor
+Admin doanh nghiệp
+, Lập trình viên
+Mô tả 
+Use case cho phép lập trình viên kéo mã nguồn từ kho chứa Git, tự động build thành Docker Image và chạy thành container ứng dụng trên VPS.
+Điều kiện
+Sau khi kết thúc
+Ứng dụng được khởi chạy thành công trên máy chủ và có thể truy cập thông qua tên miền (domain).
+Luồng sự kiện chính
+1. Người dùng chọn dự án cần deploy và nhấn "Triển khai".
+2. Hệ thống yêu cầu nhập URL kho chứa Git, tên nhánh (branch)
+ và git access token nếu là private
+. 
+3. Người dùng xác nhận thông tin.
+4. Hệ thống kiểm tra tổng lượng RAM đang dùng so với Quota doanh nghiệp.
+5. Hệ thống phân tích mã nguồn và sinh cấu hình Docker tự động.
+6. Build Docker Image và chạy Container trên cổng ngẫu nhiên.
+7. Tự động cập nhật file cấu hình Nginx để trỏ tên miền vào cổng mới.
+8. Thông báo triển khai thành công.
+Luồng sự kiện phụ
+Rẽ nhánh ở bước 4:
+-
+ Nếu dung lượng RAM yêu cầu vượt quá Quota của doanh nghiệp, hệ thống hiển thị thông báo lỗi từ chối triển khai.
+Rẽ nhánh ở bước 6: 
+-
+Nếu quá trình Build thất bại do mã nguồn bị lỗi, hệ thống hiển thị lỗi Build, lưu log chi tiết và dừng tiến trình.
+Chức năng khác: Người dùng nhấn "Hủy", hệ thống đóng form và trở về trang chi tiết dự án.
+3.2.1.4 
+Use case 
+Quản lý Tài nguyên và Giám sát (Resource & Monitoring
+)
+Hình 3-
+5
+:
+ Use case 
+Quản lý Tài nguyên và Giám sát (Resource & Monitoring
+)
+Bảng 3-
+4
+: Mô tả Use case 
+Quản lý Tài nguyên và Giám sát (Resource & Monitoring
+)
+Tên Use case
+Quản lý Tài nguyên và Giám sát (Resource & Monitoring
+)
+Actor
+Admin doanh nghiệp
+, Lập trình viên
+Mô tả 
+Cho phép lập trình viên truy cập vào không gian dự án để theo dõi Logs, mức tiêu thụ RAM/CPU và cấu hình lại (Scale) dung lượng phần cứng.
+Luồng sự kiện chính
+1. Người dùng đã đăng nhập vào hệ thống.
+2. Người dùng truy cập trang tổng quan (Overview) của dự án.
+3. Người dùng có thể thực hiện các chức năng mở rộng như Cập nhật RAM/CPU, Xem Metrics, Xem Logs.
+Luồng sự kiện phụ
+Không có.
+<Extend Use Case>
+Extend 1 (Cập nhật RAM/CPU):
+1. Người dùng điều chỉnh thông số RAM/CPU trên thanh trượt và nhấn "Lưu".
+2. Hệ thống kiểm tra tổng tài nguyên cấu hình so với Quota doanh nghiệp.
+3. Gọi Docker API để cập nhật giới hạn phần cứng trực tiếp vào Container.
+4. Cập nhật thông số vào CSDL và hiển thị thông báo thành công.
+Rẽ nhánh: Nếu thông số RAM cấu hình mới làm vượt Quota, hệ thống báo lỗi và hủy lưu.
+Extend 2 (Xem Logs & Metrics):
+1. Người dùng nhấp vào tab "Terminal Logs" hoặc "Metrics".
+2. Hệ thống thiết lập kết nối WebSocket và liên tục stream dữ liệu Console hoặc thông số CPU/RAM thực tế.
+3.2.1.
+5
+ 
+Use case 
+Khởi tạo Cơ sở dữ liệu (Database Provisioning)
+Hình 3-
+6
+:
+ Use case 
+Khởi tạo Cơ sở dữ liệu (Database Provisioning)
+Bảng 3-
+5
+: Mô tả Use case 
+Khởi tạo Cơ sở dữ liệu (Database Provisioning)
+Tên Use case
+Khởi tạo Cơ sở dữ liệu (Database Provisioning)
+Actor
+Admin doanh nghiệp
+, Lập trình viên
+Mô tả 
+Use case cho phép lập trình viên tạo nhanh một hệ quản trị CSDL (PostgreSQL, MySQL, Redis...) độc lập cho dự án.
+Điều kiện sau khi kết thúc
+Container CSDL được khởi chạy, có ánh xạ lưu trữ và trả về chuỗi kết nối bảo mật.
+Luồng sự kiện chính
+1. Người dùng vào tab "Databases" và nhấn "Tạo mới".
+2. Chọn loại CSDL (VD: PostgreSQL) và xác nhận tạo.
+3. Hệ thống kiểm tra Quota số lượng CSDL của doanh nghiệp.
+4. Hệ thống tải Image và khởi tạo Volume lưu trữ vật lý.
+5. Sinh mật khẩu ngẫu nhiên độ phức tạp cao và khởi chạy Container.
+6. Trả về Chuỗi kết nối (Connection String) cho người dùng sao chép.
+Luồng sự kiện phụ
+Rẽ nhánh ở bước 3: 
+-
+Nếu doanh nghiệp đã đạt giới hạn tối đa số lượng CSDL cho phép, hệ thống hiển thị thông báo lỗi và không cho phép tạo thêm.
+Chức năng khác: Người dùng nhấn "Hủy", hệ thống đóng Modal tạo mới và không thực hiện thao tác nào
+3.2.1.
+6
+ 
+Use case 
+Quản lý Thành viên & Phân quyền (RBAC)
+Hình 3-
+7
+:
+ Use case 
+Quản lý Thành viên & Phân quyền (RBAC)
+Bảng 3-
+6
+: Mô tả Use case 
+Quản lý Thành viên & Phân quyền (RBAC)
+Tên Use case
+Quản lý Thành viên & Phân quyền (RBAC)
+Actor
+Admin doanh nghiệp
+ (Enterprise 
+Admin doanh nghiệp
+), Quản lý dự án
+Mô tả 
+Cho phép quản trị viên xem danh sách thành viên dự án, từ đó có thể mở rộng để thêm nhân viên hoặc gán vai trò (RBAC).
+Luồng sự kiện chính
+1. Người dùng đã đăng nhập với quyền 
+Admin doanh nghiệp
+.
+2. Người dùng truy cập tab "Thành viên (Members)" của dự án.
+3. Hệ thống hiển thị danh sách các thành viên hiện tại.
+Luồng sự kiện phụ
+Không có.
+<Extend Use Case>
+Extend 1 (Thêm nhân viên và Gán vai trò):
+1. Người dùng chọn "Thêm thành viên".
+2. Tìm kiếm tên/email của nhân viên.
+3. Chọn vai trò (Role) muốn gán và nhấn lưu.
+4. Hệ thống kiểm tra xác thực quyền quản lý (Tenant Isolation).
+5. Lưu liên kết thành viên vào CSDL và thông báo thành công.
+Rẽ nhánh: Nếu nhân viên không thuộc quyền quản lý của 
+Admin doanh nghiệp
+, hệ thống từ chối do vi phạm Tenant Isolation.
+Extend 2 (Xóa thành viên):
+1. Người dùng nhấn nút xóa cạnh tên thành viên.
+2. Hệ thống thu hồi quyền và xóa bản ghi liên kết khỏi dự án.
+3.2.1.
+7
+ 
+Use case 
+Quản lý Vai trò Tùy biến (Custom Roles)
+Hình 3-
+8
+:
+ Use case 
+Quản lý Vai trò Tùy biến (Custom Roles)
+Bảng 3-
+7
+: Mô tả Use case 
+Quản lý Vai trò Tùy biến (Custom Roles)
+Tên Use case
+Quản lý Vai trò Tùy biến (Custom Roles)
+Actor
+Admin doanh nghiệp
+ (Enterprise 
+Admin doanh nghiệp
+)
+Mô tả 
+Cho phép quản trị viên doanh nghiệp tự định nghĩa các vai trò mới với danh sách quyền hạn (Permissions) chi tiết (ví dụ: project:read, env:write) để tùy biến mô hình phân quyền thay vì dùng vai trò mặc định.
+Điều kiện sau khi kết thúc
+Một vai trò mới được tạo hoặc cập nhật thành công, có thể dùng để gán cho các thành viên trong dự án.
+Luồng sự kiện chính
+1. Người dùng (
+Admin doanh nghiệp
+) vào mục cài đặt "Vai trò hệ thống".
+2. Hệ thống hiển thị danh sách các vai trò tùy biến hiện có.
+3. Người dùng chọn "Tạo mới".
+4. Nhập Tên vai trò và tích chọn các quyền (Permissions) tương ứng.
+5. Bấm Lưu để lưu vào CSDL hệ thống.
+Luồng sự kiện phụ
+Không có.
+<Extend Use Case>
+Extend 1 (Sửa Vai trò):
+1. Nhấn nút Sửa cạnh tên vai trò.
+2. Thêm/bớt quyền và lưu lại.
+3. Hệ thống cập nhật CSDL.
+Extend 2 (Xóa Vai trò):
+1. Nhấn nút Xóa.
+2. Hệ thống kiểm tra vai trò có đang gán cho ai không (nếu có báo lỗi).
+3. Xóa thành công.
+3.2.1.
+7
+ 
+Use case 
+Cảnh báo sự cố qua Slack (Slack Alert)
+Hình 3-
+9
+:
+ Use case 
+Cảnh báo sự cố qua Slack (Slack Alert)
+Bảng 3-
+8
+: Mô tả Use case 
+Cảnh báo sự cố qua Slack (Slack Alert)
+Tên Use case
+Cảnh báo sự cố qua Slack (Slack Alert)
+Actor
+Developer, Hệ thống
+Mô tả 
+Use case cho phép lập trình viên thiết lập Webhook Slack để hệ thống tự động gửi tin nhắn cảnh báo khi 
+Dự án
+gặp sự cố (quá tải CPU/RAM, sập đột ngột, deploy lỗi) hoặc gửi thông báo khi deploy thành công.
+Điều kiện sau khi kết thúc
+- Hệ thống sẽ gọi API webhook của Slack để đẩy tin nhắn định dạng JSON.
+Luồng sự kiện chính
+Cấu hình Webhook:
+1. Developer mở Cài đặt nâng cao của dự án.
+2. Nhập URL Slack Webhook và chu kỳ gửi cảnh báo.
+3. Bấm "Lưu cấu hình nâng cao" hoặc "Gửi tin nhắn thử".
+4. Backend xác nhận lưu DB hoặc gọi HTTP POST tới Slack để test.
+Tự động gửi cảnh báo:
+1. Hệ thống giám sát (Cron job) định kỳ kiểm tra trạng thái 
+Dự án
+.
+2. Phát hiện 
+d
+ự án
+ 
+bị tắt đột ngột hoặc vượt ngưỡng CPU/RAM.
+3. Backend định dạng tin nhắn JSON (kèm màu sắc đỏ/xanh/vàng) và gửi POST request tới URL Slack Webhook.
+4. Lập trình viên nhận thông báo ngay lập tức trên app Slack.
+3.2.2 Sơ đồ tuần tự
+3.2.
+2
+.1 
+Sơ đồ tuần tự 
+đăng nhập:
+Hình 3-
+10
+:
+ Sơ đồ tuần tự đăng nhập
+ 
+3.2.
+2
+.
+2
+ 
+Sơ đồ tuần tự 
+đăng 
+ký
+:
+Hình 3-
+11
+:
+ Sơ đồ tuần tự đăng ký
+ 
+3.2.
+2
+.
+3
+ 
+Sơ đồ tuần tự
+ 
+Triển khai ứng dụng (Git Deploy)
+Hình 3-
+12
+:
+ Sơ đồ tuần tự 
+Triển khai ứng dụng (Git Deploy)
+3.2.
+2
+.
+4
+ 
+Sơ đồ tuần tự 
+Quản lý Tài nguyên (Scale RAM/CPU)
+Hình 3-
+13
+:
+ Sơ đồ tuần tự 
+Quản lý Tài nguyên (Scale RAM/CPU)
+3.2.
+2
+.
+5
+ 
+Sơ đồ tuần tự 
+Khởi tạo Cơ sở dữ liệu
+Hình 3-
+14
+:
+ Sơ đồ tuần tự 
+Khởi tạo Cơ sở dữ liệu
+3.2.
+2
+.
+6
+ 
+Sơ đồ tuần tự 
+Quản lý Thành viên & Phân quyền (RBAC)
+Hình 3-
+15
+:
+ Sơ đồ tuần tự 
+Quản lý Thành viên & Phân quyền (RBAC)
+3.2.
+2
+.
+7
+ 
+Sơ đồ tuần tự 
+Tạo Vai trò Tùy biến (Custom Roles)
+Hình 3-
+16
+:
+ Sơ đồ tuần tự 
+Tạo Vai trò Tùy biến (Custom Roles)
+3.2.
+2
+.
+8
+ 
+Sơ đồ tuần tự 
+Cảnh báo sự cố qua Slack (Slack Alert)
+Hình 3-
+17
+:
+ Sơ đồ tuần tự 
+Cảnh báo sự cố qua Slack (Slack Alert)
+3.
+2
+.3 Sơ đồ hoạt động
+3.
+2
+.
+3
+.
+1
+ 
+Sơ đồ hoạt động đăng 
+nhập
+ 
+Hình 3-
+18
+:
+ Sơ đồ hoạt động đăng nhập
+ 
+3.2.
+3
+.
+2
+ 
+Sơ đồ hoạt động đăng ký 
+Hình 3-
+19
+:
+ Sơ đồ hoạt động 
+đăng ký
+3.2.
+2
+.
+3
+ 
+Sơ đồ hoạt động 
+Triển khai ứng dụng (Git Deploy)
+Hình 3-
+20
+:
+ Sơ đồ hoạt động 
+Triển khai ứng dụng (Git Deploy)
+3.2.
+2
+.
+4
+ 
+Sơ đồ hoạt động 
+Cập nhật Tài nguyên
+Hình 3-
+21
+:
+ Sơ đồ hoạt động 
+Cập nhật Tài nguyên
+3.2.
+2
+.
+5
+ 
+Sơ đồ hoạt 
+động
+ 
+Khởi tạo Cơ sở dữ liệu
+Hình 3-
+22
+:
+ Sơ đồ hoạt động 
+Khởi tạo Cơ sở dữ liệu
+3.2.
+2
+.
+6
+ 
+Sơ đồ hoạt động 
+Quản lý Thành viên & Phân quyền (RBAC) 
+ 
+Hình 3-
+23
+:
+ Sơ đồ hoạt động 
+Quản lý Thành viên & Phân quyền (RBAC)
+3.2.
+2
+.
+7
+ 
+Sơ đồ hoạt động
+ Tạo Vai trò Tùy biến (Custom Roles)
+Hình 3-
+24
+:
+ Sơ đồ hoạt động 
+Tạo Vai trò Tùy biến (Custom Roles)
+3.2.
+2
+.
+8
+ 
+Sơ đồ hoạt động
+ 
+Cảnh báo sự cố qua Slack (Slack Alert)
+Hình 3-
+25
+:
+ Sơ đồ hoạt động 
+Cảnh báo sự cố qua Slack (Slack Alert)
+3.3 
+HỆ THỐNG MÀN HÌNH
+3.3.1 Giao diện trang chủ 
+Hình 3-
+26
+:
+ Thiết kế giao diện trang chủ
+3.3.
+2
+ Giao diện trang đăng nhập 
+Hình 3-
+27
+:
+ Thiết kế giao diện đăng nhập
+3.3.
+3
+ Giao diện trang đăng kí
+Hình 3-
+28
+:
+ Thiết kế giao diện 
+đăng kí
+3.3.
+4
+ Giao diện t
+rang 
+dashboard
+Hình 3-
+29
+:
+ Thiết kế giao diện 
+dashboad
+3.3.5 Giao diện trang quản lý dự án
+Hình 3-
+30
+:
+ Thiết kế giao diện
+ quản lý dự án
+3.3.6 Giao diện trang quản lý cơ sở dữ liệu 
+Hình 3-
+31
+:
+ Thiết kế giao diện 
+quản lý cơ sở dữ liệu
+3.3.7 Giao diện trang quản lý 
+tài khoản
+Hình 3-
+32
+:
+ Thiết kế giao diện
+ quản lý tài khoản
+3.3.8 Giao diện trang quản lý 
+vai trò
+ dành cho Admin doanh nghiệp và SuperAdmin
+Hình 3-
+33
+:
+ Thiết kế giao diện 
+trang quản lý vài trò
+3.3.
+9
+ 
+Giao diện 
+tran
+g giám sát hệ thống cho SuperAdmin
+Hình 3-
+34
+:
+ Thiết kế giao diện 
+giám sát hệ thống
+3.3.
+10
+ Giao diện trang 
+chi tiết dự án
+Hình 3-
+35
+:
+ Thiết kế giao diện 
+trang chi tiết dự án
+3.3.
+11
+ Giao diện trang 
+triển khai ứng dụng 
+Hình 3-
+36
+:
+ Thiết kế giao diện 
+Super
+Admin doanh nghiệp
+3.3.
+12
+ Giao diện trang 
+cấu hình biến môi trường 
+Hình 3-
+37
+:
+ Thiết kế giao diện 
+trang cấu hình biến môi trường
+3.3.
+13
+ Giao diện trang 
+theo dõi nhật ký hoạt đ
+ộng
+Hình 3-
+38
+:
+ Thiết kế giao diện
+ trang theo dõi nhật ký hoạt động
+3.3.
+14
+ Giao diện trang 
+thông số kỹ thuật
+Hình 3-
+39
+:
+ Thiết kế giao diện 
+trang thông số kỹ thuật
+3.3.
+15
+ Giao diện trang 
+cài đặt dự án
+Hình 3-
+40
+:
+ Thiết kế giao diện 
+trang 
+cài đặt dự án
+Hình 3-
+41
+:
+ Thiết kế giao diện 
+trang 
+cài đặt dự án
+3.3.
+16
+ Giao diện tr
+ang cài đặt tài khoản
+Hình 3-
+42
+:
+ Thiết kế giao diện 
+trang cài đặt tài khoản
+Chương
+ 
+4.
+ THỬ NGHIỆM
+4.1 
+CÁC KỊCH BẢN THỬ NGHIỆM
+4.1.1 Kiểm thử chức năng đăng nhập
+STT
+Test Suite
+Test case
+Các bước thực hiện
+1
+Trang đăng nhập
+Kiểm tra đ
+ăng nhập thành công
+1. Vào trang đăng nhập
+2. Nhập Email và Mật khẩu đúng
+3. Nhấn nút "Đăng nhập"
+2
+Kiểm tra đ
+ăng nhập sai thông tin
+1. Vào trang đăng nhập
+2. Nhập sai Email hoặc Mật khẩu
+3. Nhấn nút "Đăng nhập"
+3
+Kiểm tra đăng nhập thiếu thông tin
+1. Vào trang đăng nhập
+2. Bỏ trống Email hoặc Mật khẩu
+3. Nhấn nút "Đăng nhập"
+Bảng 4.1.1 
+Kiểm thử chức năng đăng nhập
+4.1.
+2
+ Kiểm thử chức năng đăng 
+ký
+STT
+Test Suite
+Test case
+Các bước thực hiện
+1
+Trang đăng 
+ký
+Kiểm tra đ
+ăng 
+ký
+ thành công
+1. Vào trang đăng ký
+2. Nhập đầy đủ Tên, Email mới, Mật khẩu
+3. Nhấn nút "Đăng ký"
+2
+Kiểm tra đ
+ăng 
+ký thiếu 
+thông tin
+1. Vào trang đăng ký
+2. Bỏ trống Tên, Email hoặc Mật khẩu
+3. Nhấn nút "Đăng ký"
+3
+Kiểm tra đ
+ăng 
+ký
+ với 
+email đã tồn tại
+1. Vào trang đăng ký
+2. Nhập Email đã có trong hệ thống
+3. Nhấn nút "Đăng ký"
+Bảng 4.1.
+2
+ 
+Kiểm thử chức năng đăng 
+ký
+4.1.
+3
+ Kiểm thử chức năng
+ triển khai ứng dụng (Deploy)
+STT
+Test Suite
+Test case
+Các bước thực hiện
+1
+Quản lý dự án
+Kiểm tra triển khai thành công
+1. Vào form triển khai dự án
+2. Nhập link Git hợp lệ
+3. Chọn mức RAM/CPU an toàn
+4. Nhấn nút "Triển khai"
+2
+Kiểm tra triển khai khi vượt quá RAM
+1. Vào form triển khai dự án
+2. Kéo thanh RAM vượt mức cho phép của hệ thống
+3. Nhấn nút "Triển khai"
+Bảng 4.1.
+3
+ 
+Kiểm thử chức năng 
+triển khai ứng dụng (Deploy)
+4.1.
+4
+ Kiểm thử chức năng 
+khởi tạo Cơ sở dữ liệu
+STT
+Test Suite
+Test case
+Các bước thực hiện
+1
+Quản lý CSDL
+Kiểm tra tạo CSDL thành công
+1. Vào trang Cơ sở dữ liệu
+2. Chọn loại DB (Postgres/MySQL)
+3. Nhấn nút "Khởi tạo"
+2
+Kiểm tra tạo CSDL khi vượt Quota
+1. Vào trang Cơ sở dữ liệu
+2. Khởi tạo DB khi đã đạt giới hạn số lượng
+3. Nhấn nút "Khởi tạo"
+Bảng 4.1.
+4
+ 
+Kiểm thử chức năng 
+khởi tạo Cơ sở dữ liệu
+4.1.
+5
+ Kiểm thử chức năng 
+gửi cảnh báo (Slack Webhook)
+STT
+Test Suite
+Test case
+Các bước thực hiện
+1
+Cài đặt dự án
+Kiểm tra gửi thông báo Slack thành công
+1. Vào Cài đặt dự án
+2. Dán link Slack Webhook hợp lệ
+3. Nhấn "Gửi cảnh báo thử nghiệm"
+2
+K
+iểm tra gửi cảnh báo khi chưa cấu hình Webhook
+1. Vào Cài đặt dự án
+2. Để trống ô link Slack Webhook
+3. Nhấn "Gửi cảnh báo thử nghiệm"
+Bảng 4.1.
+5
+ 
+Kiểm thử chức năng 
+khởi tạo Cơ sở dữ liệu
+4.2 
+KẾT QUẢ THỬ NGHIỆM CÁC KỊCH BẢN
+4.2.1 Kết quả kiểm thử chức năng đăng nhập
+STT 
+Test Suite 
+Test case 
+Kết quả mong đợi 
+Kết quả đạt được
+1
+Trang đăng nhập
+Kiểm tra đ
+ăng nhập thành công
+Truy cập vào trang Dashboard chính
+Truy cập vào trang Dashboard chính
+2
+Kiểm tra đ
+ăng nhập sai thông tin
+Hiển thị thông báo sai tài khoản/mật khẩu
+Hiển thị thông báo sai tài khoản/mật khẩu
+3
+Kiểm tra đăng nhập thiếu thông tin
+Hiển thị thông báo yêu cầu nhập đầy đủ
+Hiển thị thông báo yêu cầu nhập đầy đủ
+Bảng 4.
+2.1
+ 
+Kiểm thử chức năng đăng nhập
+4.2.
+2
+ Kết quả kiểm thử chức năng đăng 
+ký
+STT
+Test Suite
+Test Case
+Kết quả mong đợi
+Kết quả đạt được
+1
+Trang đăng ký
+Kiểm tra đăng ký thành công
+Tạo tài khoản, tự động đăng nhập vào Dashboard
+Tạo tài khoản, tự động đăng nhập vào Dashboard
+2
+Kiểm tra đăng ký thiếu thông tin
+Hiển thị thông báo yêu cầu 
+nhập đầy đủ thông tin
+Hiển thị thông báo yêu cầu 
+nhập đầy đủ thông tin
+3
+Kiểm tra đăng ký với email đã tồn tại
+Hiển thị thông báo email đã được sử dụng
+Hiển thị thông báo email đã được sử dụng
+Bảng 4.
+2.2
+ 
+Kiểm thử chức năng đăng 
+ký
+4.2.
+3
+ Kết quả kiểm thử chức năng 
+triển khai ứng dụng (Deploy)
+STT
+Test Suite
+Test Case
+Kết quả mong đợi
+Kết quả đạt được
+1
+Trang sản phẩm
+Kiểm tra triển khai thành công
+Clone code, build Image và Container chạy thành công
+Clone code, build Image và Container chạy thành công
+2
+Kiểm tra triển khai khi vượt quá RAM
+Hiển thị lỗi hệ thống không đủ tài nguyên và hủy deploy
+Hiển thị lỗi hệ thống không đủ tài nguyên và hủy deploy
+Bảng 4.
+2.3
+ 
+Kiểm thử chức năng 
+triển khai ứng dụng (Deploy)
+4.2.
+4
+ Kết quả kiểm thử 
+chức năng khởi tạo Cơ sở dữ liệu
+STT
+Test Suite
+Test Case
+Kết quả mong đợi
+Kết quả đạt được
+1
+Quản lý CSDL
+Kiểm tra tạo CSDL thành công
+Tạo thành công Container, hiển thị chuỗi kết nối (URI)
+Tạo thành công Container, hiển thị chuỗi kết nối (URI)
+2
+Kiểm tra tạo CSDL khi vượt Quota
+Báo lỗi đã vượt quá số lượng DB cho phép
+Báo lỗi đã vượt quá số lượng DB cho phép
+Bảng 4.
+2.4
+ 
+Kiểm thử 
+chức năng khởi tạo Cơ sở dữ liệu
+4.2.
+4
+ Kết quả kiểm thử 
+chức năng 
+gửi cảnh báo (Slack Webhook)
+STT
+Test Suite
+Test Case
+Kết quả mong đợi
+Kết quả đạt được
+1
+Cài đặt dự án
+Kiểm tra gửi thông báo Slack thành công
+Tin nhắn thông số RAM/CPU xuất hiện trên kênh Slack
+Tin nhắn thông số RAM/CPU xuất hiện trên kênh Slack
+2
+Kiểm tra gửi cảnh báo khi chưa cấu hình Webhook
+Báo lỗi chưa cấu hình Slack Webhook cho dự án này
+Báo lỗi chưa cấu hình Slack Webhook cho dự án này
+Bảng 4.
+2.5
+ 
+Kiểm thử 
+chức năng gửi cảnh báo (Slack Webhook)
+4.3
+ 
+XỬ LÝ CÁC TRƯỜNG HỢP NGOẠI LỆ
+Trong quá trình vận hành, hệ thống Potato được thiết kế để tự động bắt và xử lý các lỗi ngoại lệ (Exceptions) nhằm đảm bảo hệ thống không bị sập (crash) và luôn cung cấp thông báo rõ ràng cho người dùng:
+- 
+Lỗi kết nối cơ sở dữ liệu: Khi Backend không thể kết nối tới PostgreSQL (do sập mạng hoặc sai cấu hình), hệ thống sẽ không bị crash mà bắt lỗi và hiển thị thông báo: "Không thể kết nối tới cơ sở dữ liệu. Vui lòng thử lại sau."
+- 
+Lỗi xác thực và phân quyền (401/403): Trường hợp người dùng chưa đăng nhập, token hết hạn, hoặc cố tình truy cập vào dữ liệu dự án của Doanh nghiệp (Tenant) khác mà không có quyền (vai trò không phù hợp), hệ thống sẽ từ chối truy cập và tự động chuyển hướng về trang chủ hoặc trang đăng nhập.
+- 
+Lỗi giao tiếp với Docker Engine: Do đặc thù hệ thống Potato phải gọi API trực tiếp xuống Docker, nếu phần mềm Docker ở dưới máy chủ bị tắt hoặc lỗi đột ngột, hệ thống sẽ ném ra ngoại lệ: "Mất kết nối với Docker Engine. Không thể thực hiện lệnh Deploy lúc này."
+- 
+Lỗi cạn kiệt tài nguyên máy chủ (Overcommit): Khi cấp phát RAM/CPU vượt quá giới hạn trống thực tế của máy chủ vật lý, hệ thống chủ động ném lỗi ngoại lệ từ chối thực thi lệnh Deploy để bảo vệ phần cứng máy chủ không bị quá tải.
+- 
+Lỗi trang không tồn tại (404): Khi người dùng truy cập vào một đường dẫn không hợp lệ trên giao diện hoặc gọi sai API, hệ thống sẽ hiển thị trang lỗi với nội dung: "404 Not Found - Không tìm thấy trang."
+- 
+Lỗi hệ thống nội bộ (500 hoặc lỗi không xác định): Đối với các lỗi không mong muốn (như lỗi crash khi Build Docker Image, server timeout, v.v.), hệ thống sẽ ghi lại log chi tiết cho lập trình viên và chỉ hiển thị cho người dùng thông báo chung: "Có lỗi hệ thống xảy ra. Vui lòng thử lại sau."
+Chương 
+5.
+ KẾT LUẬN
+5.1 
+KẾT QUẢ ĐỐI CHIẾU VỚI MỤC TIÊU
+STT
+Tiêu chí đánh giá
+Kết quả cần đạt
+Kết quả
+1
+Quản lý xác thực và phân quyền
+Hỗ trợ đăng nhập, đăng ký an toàn; Phân quyền người dùng theo vai trò linh hoạt (RBAC).
+Đạt
+2
+Quản lý cấu hình Dự án
+Cho phép tạo, sửa, xóa dự án; thiết lập các thông số môi trường và giới hạn tài nguyên (RAM, CPU).
+Đạt
+3
+Tự động hóa Triển khai (Auto-Deploy)
+Kết nối mã nguồn Git, tự động đóng gói (Docker Build) và chạy ứng dụng mà không cần gõ lệnh.
+Đạt
+4
+Cấp phát Cơ sở dữ liệu
+Khởi tạo nhanh chóng các Cơ sở dữ liệu (PostgreSQL/MySQL) cho từng dự án một cách độc lập.
+Đạt
+5
+Gửi cảnh báo hệ thống (Alert)
+Theo dõi mức sử dụng RAM/CPU của Container và gửi thông báo cảnh báo qua webhook (Slack).
+Đạt
+6
+Kiến trúc Đa khách hàng (Multi-Tenant)
+Cô lập hoàn toàn dữ liệu và quyền truy cập giữa các doanh nghiệp/tổ chức khác nhau trên cùng hệ thống.
+Đạt
+5.2 
+CÁC VẤN ĐỀ CÒN TỒN ĐỌNG
+- 
+Khả năng mở rộng máy chủ chưa linh hoạt: Hiện tại nền tảng chỉ có thể triển khai các dự án con trên cùng một máy chủ vật lý (Single-Node), chưa thể tự động phân tải sang các máy chủ khác khi hệ thống bị quá tải.
+- 
+Hỗ trợ ngôn ngữ lập trình còn hạn chế: Quá trình tự động đóng gói (Build) hiện tại tối ưu hóa tốt nhất cho các dự án chạy bằng Node.js, chưa hỗ trợ trơn tru các dự án dùng ngôn ngữ khác như Python, Java hay Go.
+- 
+Giao diện chưa thực sự tối ưu trên thiết bị di động: Một số bảng danh sách (ví dụ: bảng quản lý cấu hình môi trường, bảng quản lý quyền hạn) có nhiều cột dữ liệu nên vẫn còn khó quan sát và thao tác trên màn hình điện thoại nhỏ.
+5.3 
+MỞ RỘNG
+- 
+Tích hợp công nghệ Kubernetes (K8s): Nâng cấp kiến trúc từ Docker cục bộ lên cụm Kubernetes để hệ thống có khả năng tự động phân bổ dự án sang nhiều máy chủ (Cluster) và tự phục hồi khi có máy chủ vật lý gặp sự cố.
+- 
+Bổ sung kịch bản Build đa ngôn ngữ (Buildpacks): Nghiên cứu và tích hợp các bộ Build tự động thông minh để hệ thống nhận diện và chạy được đa dạng các loại ngôn ngữ lập trình phổ biến nhất hiện nay.
+- 
+Tối ưu hóa trải nghiệm di động (Responsive UI/UX): Cải tiến lại giao diện hiển thị dạng thẻ (Card view) thay cho dạng bảng (Table view) trên các màn hình nhỏ, giúp người dùng có thể điều khiển và theo dõi dự án dễ dàng ngay trên điện thoại di động.
+PHỤ LỤC
+HƯỚNG DẪN SỪ DỤNG
+Bước 1: Truy cập và Đăng ký tài khoản
+Người dùng mở trình duyệt web và truy cập vào địa chỉ tên miền của hệ thống Potato.
+Tại màn hình chào mừng, chọn tab "Đăng ký".
+Nhập các thông tin yêu cầu bao gồm:
+Họ và tên
+Email
+Mật khẩu (tối thiểu 6 ký tự)
+Nhấn nút "Đăng ký" để hoàn tất.
+Sau khi đăng ký thành công, hệ thống sẽ tự động tạo phiên đăng nhập và chuyển hướng người dùng vào màn hình Dashboard.
+Bước 2: Đăng nhập hệ thống
+Tại giao diện chính, chọn tab "Đăng nhập".
+Nhập thông tin:
+Email
+Mật khẩu
+Nhấn nút "Đăng nhập".
+Đăng nhập thành công, người dùng có thể thực hiện các thao tác triển khai dự án, quản lý cơ sở dữ liệu và cấu hình hệ thống...
+Bước 3: Triển khai dự án mới từ Git (Gieo mầm)
+Trên thanh menu chính bên trái, chọn mục "Dự án của tôi".
+Nhấn vào nút "Tạo dự án mới".
+Hệ thống hiển thị form triển khai, người dùng nhập các thông tin:
+Tên dự án (Plot Name)
+URL Repository (Đường dẫn mã nguồn GitHub/GitLab...)
+Tên nhánh (Branch)
+Git Access Token (nếu sử dụng kho lưu trữ Private)
+Nhấn nút "Triển khai ngay". Hệ thống sẽ tự động kéo mã nguồn, đóng gói Docker Image và khởi chạy Container.
+Bước 4: Khởi tạo Cơ sở dữ liệu (Sprouts)
+Trên thanh điều hướng, chọn mục "Cơ sở dữ liệu".
+Nhấn nút "Khởi tạo CSDL mới".
+Chọn loại CSDL mong muốn cung cấp sẵn (Ví dụ: PostgreSQL, MySQL, Redis, MongoDB...).
+Đặt tên và cấu hình giới hạn tài nguyên lưu trữ.
+Nhấn nút "Khởi tạo". Hệ thống sẽ hiển thị thông báo thành công và cung cấp Chuỗi kết nối (Connection String) để lập trình viên sử dụng.
+Bước 5: Giám sát Nhật ký (Logs) và Thông số tài nguyên (Metrics)
+Tại trang chi tiết của một dự án đang hoạt động, chọn tab "Nhật ký Logs".
+Màn hình Terminal sẽ hiển thị trực tiếp (real-time) các luồng dữ liệu Build & Runtime xuất ra từ Container để hỗ trợ gỡ lỗi.
+Người dùng chuyển sang tab "Thông số Metrics" để xem biểu đồ trực quan về mức độ tiêu thụ RAM và CPU của dự án theo thời gian thực.
+Bước 6: Thiết lập cấu hình và Cảnh báo sự cố
+Trong trang chi tiết dự án, chọn tab "Cài đặt".
+Người dùng có thể thực hiện:
+Kéo thanh trượt để thay đổi cấu hình giới hạn RAM/CPU.
+Bật tính năng "Tự động Co giãn" (Auto-Scale) để dự án tự mượn thêm tài nguyên khi quá tải.
+Thêm đường dẫn Slack Alert Webhook ở phần cài đặt nâng cao.
+Nhấn "Lưu thay đổi". Khi dự án gặp sự cố (vượt RAM/CPU hoặc sập), hệ thống sẽ tự động gửi tin nhắn cảnh báo về ứng dụng Slack của lập trình viên.
+TÀI LIỆU THAM KHẢO
+[1] Laravel Documentation (2025). 
+Official Documentation for Laravel Framework
+. 
+https://laravel.com/docs
+[2] Laracasts (2025). 
+The Best Laravel and PHP Screencasts
+. 
+https://laracasts.com
+[3] Laravel News (2025). 
+Latest Laravel News, Tutorials, and Packages
+. 
+https://laravel-news.com
+[4] Node.js Documentation (2025). 
+Official Documentation for Node.js
+. https://nodejs.org/en/docs
+[5] Node.js Dev (2025). 
+Node.js Guides and Resources
+. 
+https://nodejs.dev
+[6] MySQL Documentation (2025). 
+MySQL 8.0 Reference Manual
+. Oracle Corporation. 
+https://dev.mysql.com/doc/
+[7] W3Schools (2025). 
+MySQL Tutorial – Learn MySQL Basics
+. https://www.w3schools.com/mysql/

@@ -6,50 +6,123 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting Seeding Test Data...');
 
-  // 1. Ensure Admin User exists
-  const adminEmail = 'admin@potato.com';
-  let admin = await prisma.user.findUnique({ where: { email: adminEmail } });
-
-  if (!admin) {
-    const hashedPassword = await bcrypt.hash('adminpassword', 10);
-    admin = await prisma.user.create({
+  // 1. Ensure Super Admin User exists
+  const superadminEmail = 'superadmin@potato.com';
+  let superadmin = await prisma.user.findUnique({ where: { email: superadminEmail } });
+  const hashedSuperPassword = await bcrypt.hash('superadminpassword', 10);
+  if (!superadmin) {
+    superadmin = await prisma.user.create({
       data: {
-        email: adminEmail,
-        password: hashedPassword,
-        name: 'System Admin',
+        email: superadminEmail,
+        password: hashedSuperPassword,
+        name: 'Super Admin',
         role: 'ADMIN',
       },
     });
-    console.log('✅ Admin user created.');
+    console.log('✅ Super Admin user created.');
+  } else {
+    superadmin = await prisma.user.update({
+      where: { email: superadminEmail },
+      data: { password: hashedSuperPassword, role: 'ADMIN' },
+    });
+    console.log('✅ Super Admin user updated.');
   }
 
-  // 1.5 Ensure Regular User exists
+  // 2. Ensure Admin User exists (initially without custom role)
+  const adminEmail = 'admin@potato.com';
+  let admin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const hashedAdminPassword = await bcrypt.hash('adminpassword', 10);
+  if (!admin) {
+    admin = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        password: hashedAdminPassword,
+        name: 'Enterprise Admin',
+        role: 'DEVELOPER',
+      },
+    });
+    console.log('✅ Admin user created.');
+  } else {
+    admin = await prisma.user.update({
+      where: { email: adminEmail },
+      data: { password: hashedAdminPassword, role: 'DEVELOPER' },
+    });
+    console.log('✅ Admin user updated.');
+  }
+
+  // 3. Ensure Custom Role "Admin" exists with system permissions, owned by Admin
+  let adminCustomRole = await prisma.customRole.findUnique({ where: { name: 'Admin' } });
+  const systemPermissions = [
+    'system:project:create',
+    'system:user:manage',
+    'system:infrastructure:read',
+    'system:role:manage',
+    'project:read',
+    'project:start',
+    'project:stop',
+    'project:restart',
+    'project:hibernate',
+    'project:delete',
+    'project:settings',
+    'project:resources',
+    'project:deploy',
+    'env:read',
+    'env:write',
+    'member:manage'
+  ];
+
+  if (!adminCustomRole) {
+    adminCustomRole = await prisma.customRole.create({
+      data: {
+        name: 'Admin',
+        permissions: systemPermissions,
+        assignableByManager: true,
+        ownerId: admin.id,
+      },
+    });
+    console.log('✅ Custom Role "Admin" created.');
+  } else {
+    adminCustomRole = await prisma.customRole.update({
+      where: { id: adminCustomRole.id },
+      data: { permissions: systemPermissions, ownerId: admin.id },
+    });
+    console.log('✅ Custom Role "Admin" updated.');
+  }
+
+  // Update Admin user to associate with Custom Role
+  admin = await prisma.user.update({
+    where: { id: admin.id },
+    data: { customRoleId: adminCustomRole.id },
+  });
+  console.log('✅ Associated Admin user with Custom Role.');
+
+  // 4. Ensure Regular User exists, parented by Admin
   const userEmail = 'user@potato.com';
   let regularUser = await prisma.user.findUnique({ where: { email: userEmail } });
-
+  const hashedUserPassword = await bcrypt.hash('userpassword', 10);
   if (!regularUser) {
-    const hashedPassword = await bcrypt.hash('userpassword', 10);
     regularUser = await prisma.user.create({
       data: {
         email: userEmail,
-        password: hashedPassword,
-        name: 'Regular Dev',
-        role: 'USER',
+        password: hashedUserPassword,
+        name: 'Regular User',
+        role: 'DEVELOPER',
+        parentId: admin.id,
+        customRoleId: null,
       },
     });
     console.log('✅ Regular user created.');
   } else {
-    const hashedPassword = await bcrypt.hash('userpassword', 10);
     regularUser = await prisma.user.update({
       where: { email: userEmail },
-      data: { password: hashedPassword },
+      data: { password: hashedUserPassword, role: 'DEVELOPER', parentId: admin.id, customRoleId: null },
     });
-    console.log('✅ Regular user password force reset to "userpassword".');
+    console.log('✅ Regular user updated.');
   }
 
-  // 2. Clear existing test data to avoid conflicts
+  // 5. Clear existing test data to avoid conflicts
   await prisma.databaseInstance.deleteMany();
-  await prisma.project.deleteMany({ where: { userId: { in: [admin.id, regularUser.id] } } });
+  await prisma.project.deleteMany({ where: { userId: { in: [superadmin.id, admin.id, regularUser.id] } } });
 
   const now = new Date();
   const ninetyDays = 90 * 24 * 60 * 60 * 1000;
@@ -120,7 +193,17 @@ async function main() {
     }
   });
 
-  console.log('✅ Seeding complete! 4 projects and 3 databases created.');
+  // Tạo membership cho regularUser trong Potato-Production (p1) làm VIEWER để test
+  await prisma.projectMember.create({
+    data: {
+      projectId: p1.id,
+      userId: regularUser.id,
+      role: 'VIEWER',
+      permissions: [],
+    },
+  });
+
+  console.log('✅ Seeding complete! 4 projects, 3 databases and 1 member created.');
 }
 
 main()

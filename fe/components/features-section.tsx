@@ -6,37 +6,37 @@ import { Rocket, Database, Activity, Shield } from "lucide-react"
 const features = [
   {
     icon: Rocket,
-    title: "One-Click Mash",
-    subtitle: "(Deploy)",
+    title: "Triển khai 1-Click",
+    subtitle: "(Triển khai)",
     description:
-      "Deploy your applications with a single click. Our intelligent infrastructure handles scaling, rollbacks, and everything in between.",
+      "Triển khai ứng dụng của bạn chỉ với một cú nhấp chuột. Hạ tầng thông minh của chúng tôi tự động xử lý mở rộng, rollback và mọi thứ ở giữa.",
     color: "text-primary",
     bgColor: "bg-primary/10",
   },
   {
     icon: Database,
-    title: "Automated Potato Patches",
-    subtitle: "(Databases)",
+    title: "Khởi tạo Database Tự động",
+    subtitle: "(Cơ sở dữ liệu)",
     description:
-      "Spin up managed databases instantly. PostgreSQL, MySQL, Redis - all preconfigured and ready to serve your data fresh.",
+      "Khởi tạo database nhanh chóng. PostgreSQL, MySQL, Redis - tất cả đều được cấu hình sẵn và luôn sẵn sàng hoạt động.",
     color: "text-primary",
     bgColor: "bg-primary/10",
   },
   {
     icon: Activity,
-    title: "Real-time Eyeing",
-    subtitle: "(Monitoring)",
+    title: "Giám sát Thời gian thực",
+    subtitle: "(Giám sát)",
     description:
-      "Keep an eye on your applications 24/7. Logs, metrics, and traces - all in one place with intelligent alerting.",
+      "Theo dõi sát sao ứng dụng của bạn 24/7. Nhật ký, tài nguyên và logs - tất cả ở một nơi với cảnh báo thông minh.",
     color: "text-primary",
     bgColor: "bg-primary/10",
   },
   {
     icon: Shield,
-    title: "DDoS Peeling",
-    subtitle: "(Protection)",
+    title: "Chống DDoS Toàn diện",
+    subtitle: "(Bảo mật)",
     description:
-      "Enterprise-grade security that peels away threats before they reach your apps. Sleep soundly knowing you&apos;re protected.",
+      "Bảo mật cấp doanh nghiệp loại bỏ các mối đe dọa trước khi chúng tiếp cận ứng dụng của bạn. Ngủ ngon hơn vì đã được bảo vệ.",
     color: "text-primary",
     bgColor: "bg-primary/10",
   },
@@ -76,12 +76,12 @@ export function FeaturesSection() {
           className="text-center"
         >
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-            Everything your devs need,{" "}
-            <span className="text-primary">baked in</span>
+            Mọi thứ lập trình viên cần,{" "}
+            <span className="text-primary">tích hợp sẵn</span>
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            From deployment to monitoring, Potato serves up a complete platform
-            that your team will actually enjoy using.
+            Từ triển khai đến giám sát, Potato cung cấp một nền tảng hoàn chỉnh
+            mà đội ngũ của bạn sẽ thực sự thích sử dụng.
           </p>
         </motion.div>
 
@@ -130,19 +130,19 @@ export function FeaturesSection() {
           className="mt-16 rounded-2xl border border-border bg-card p-8"
         >
           <h3 className="text-center text-lg font-semibold text-foreground">
-            Plus everything else you&apos;d expect
+            Cùng với nhiều tính năng nâng cao khác
           </h3>
           <div className="mt-6 flex flex-wrap justify-center gap-4">
             {[
-              "Git Integration",
-              "Preview Environments",
-              "Custom Domains",
-              "SSL Certificates",
+              "Tích hợp Git",
+              "Môi trường Preview",
+              "Tên miền riêng",
+              "Chứng chỉ SSL tự động",
               "Edge Functions",
               "API Gateway",
-              "Secrets Management",
-              "Team Collaboration",
-              "Audit Logs",
+              "Quản lý Secret",
+              "Cộng tác Đội nhóm",
+              "Nhật ký Hoạt động",
               "SSO/SAML",
             ].map((item, index) => (
               <span

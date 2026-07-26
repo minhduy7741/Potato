@@ -45,9 +45,9 @@
 *   **Cấp phát cổng tránh xung đột:** Hệ thống tự gán cổng ngẫu nhiên cho ứng dụng và kiểm tra qua 3 lớp (kiểm tra trong Database, kiểm tra các container đang chạy và tạo cổng ảo kiểm tra thực tế trên máy chủ) để đảm bảo không bị lỗi trùng cổng.
 *   **Tự dọn dẹp ổ đĩa (Garbage Collection):** Sau khi deploy bản mới thành công, hệ thống tự động xóa các bản build cũ và các file rác để tránh làm đầy dung lượng ổ cứng của máy chủ.
 *   **Nút Rollback nhanh:** Trong phần lịch sử deploy, người dùng có thể bấm nút "Rollback" bên cạnh bản cũ để chuyển ngay lập tức trang web đang chạy về phiên bản đó.
-*   **Volume Mapping & Discord Webhook (Cài đặt nâng cao):**
+*   **Volume Mapping & Slack Webhook (Cài đặt nâng cao):**
     *   *Volume Mapping:* Gắn thư mục của máy chủ vào container để lưu file hình ảnh/dữ liệu dài hạn (không bị mất khi deploy lại app).
-    *   *Discord Webhook:* Nhập link webhook của Discord để hệ thống tự động gửi tin nhắn báo khi deploy thành công hoặc gặp lỗi.
+    *   *Slack Webhook:* Nhập link webhook của Slack để hệ thống tự động gửi tin nhắn báo khi deploy thành công hoặc gặp lỗi.
 *   **Tự động tạo SSL:** Tạo chứng chỉ SSL bảo mật HTTPS cho các ứng dụng chạy trên local.
 
 ### 2.2. Phân hệ Quản lý Cơ sở dữ liệu (Database-as-a-Service)

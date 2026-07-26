@@ -14,6 +14,8 @@ import { apiFetch } from "@/lib/api"
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<any[]>([])
+  const [quotaUsage, setQuotaUsage] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [userName, setUserName] = useState("Dev Potato")
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -23,11 +25,15 @@ export default function DashboardPage() {
   // Track polling interval so we can clear it
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
-  const fetchProjects = async (silent = false) => {
+  const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true)
     try {
-      const data = await apiFetch<any[]>("/projects")
-      setProjects(data)
+      const [projectsData, quotaData] = await Promise.all([
+        apiFetch<any[]>("/projects"),
+        apiFetch<any>("/tenant/quota-usage")
+      ])
+      setProjects(projectsData)
+      setQuotaUsage(quotaData)
     } catch (error) {
       console.error("Fetch Error:", error)
       // If 401, token expired — redirect to login
@@ -48,8 +54,9 @@ export default function DashboardPage() {
       return
     }
     const user = JSON.parse(userJson)
+    setCurrentUser(user)
     setUserName(user.name || user.email)
-    fetchProjects()
+    fetchData()
   }, [router])
 
   // Poll every 4 seconds if any project is still "sprouting" (provisioning)
@@ -57,7 +64,7 @@ export default function DashboardPage() {
     const hasSprouting = projects.some(p => p.status === 'sprouting')
 
     if (hasSprouting) {
-      pollingRef.current = setInterval(() => fetchProjects(true), 4000)
+      pollingRef.current = setInterval(() => fetchData(true), 4000)
     } else {
       if (pollingRef.current) {
         clearInterval(pollingRef.current)
@@ -105,14 +112,14 @@ export default function DashboardPage() {
       >
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-            Welcome back, {userName}
+            Chào mừng trở lại, {userName}
           </h1>
           <p className="mt-1 text-muted-foreground">
             {"Sản phẩm của bạn đang phát triển rất tốt trong vườn."}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => fetchProjects()} disabled={isLoading}>
+          <Button variant="outline" size="icon" onClick={() => fetchData()} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           </Button>
           <Button
@@ -120,13 +127,15 @@ export default function DashboardPage() {
             onClick={() => setIsModalOpen(true)}
           >
             <Plus className="h-4 w-4" />
-            Plant New App
+            Gieo mầm App
           </Button>
         </div>
       </motion.div>
 
       {/* Stats Overview */}
-      <StatsCards projects={projects} />
+      {currentUser?.email !== "superadmin@potato.com" && (
+        <StatsCards projects={projects} quotaUsage={quotaUsage} />
+      )}
 
       {/* Projects Section */}
       <motion.div
@@ -137,17 +146,17 @@ export default function DashboardPage() {
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">My Plots</h2>
+            <h2 className="text-lg font-semibold text-foreground">Dự án của tôi</h2>
           </div>
           <div className="flex items-center gap-2">
             {projects.some(p => p.status === 'sprouting') && (
               <span className="flex items-center gap-1.5 text-xs text-primary animate-pulse">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Provisioning...
+                Đang khởi tạo...
               </span>
             )}
             <p className="text-xs text-muted-foreground">
-              {projects.length} project(s) sprouting
+              {projects.length} dự án đang nảy mầm
             </p>
           </div>
         </div>
@@ -160,7 +169,7 @@ export default function DashboardPage() {
         ) : projects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-3xl gap-4">
             <p className="text-muted-foreground">Vườn của bạn đang trống. Hãy bắt đầu gieo mầm!</p>
-            <Button variant="secondary" onClick={() => setIsModalOpen(true)}>Plant First App</Button>
+            <Button variant="secondary" onClick={() => setIsModalOpen(true)}>Gieo mầm App đầu tiên</Button>
           </div>
         ) : (
           <div className="flex flex-col gap-6">
@@ -169,7 +178,7 @@ export default function DashboardPage() {
                 key={project.id}
                 {...project}
                 index={index}
-                onUpdate={() => fetchProjects()}
+                onUpdate={() => fetchData()}
               />
             ))}
           </div>
@@ -186,13 +195,13 @@ export default function DashboardPage() {
       <CreateProjectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={() => fetchProjects()}
+        onSuccess={() => fetchData()}
       />
 
       <CreateDatabaseModal
         isOpen={isDbModalOpen}
         onClose={() => setIsDbModalOpen(false)}
-        onSuccess={() => fetchProjects()}
+        onSuccess={() => fetchData()}
       />
     </div>
   )

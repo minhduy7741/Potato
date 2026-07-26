@@ -364,7 +364,7 @@ export default function DatabasesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Sprouts (Databases)</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Cơ sở dữ liệu (Databases)</h1>
           <p className="text-muted-foreground">Quản lý các instance cơ sở dữ liệu Docker của bạn.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -373,7 +373,7 @@ export default function DatabasesPage() {
           </Button>
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setIsModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Provision Sprout
+            Khởi tạo Database
           </Button>
         </div>
       </div>
@@ -391,10 +391,10 @@ export default function DatabasesPage() {
         </div>
         <div className="flex gap-4">
           <Badge variant="outline" className="px-3 py-1 border-border">
-            Total: {databases.length}
+            Tổng số: {databases.length}
           </Badge>
           <Badge variant="outline" className="px-3 py-1 border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
-            Running: {databases.filter(d => d.status === 'running').length}
+            Đang chạy: {databases.filter(d => d.status === 'running').length}
           </Badge>
         </div>
       </div>
@@ -413,7 +413,7 @@ export default function DatabasesPage() {
               <h3 className="text-lg font-medium">Chưa có database nào</h3>
               <p className="text-sm text-muted-foreground">Hãy gieo mầm database đầu tiên của bạn!</p>
             </div>
-            <Button variant="secondary" onClick={() => setIsModalOpen(true)}>Provision Database</Button>
+            <Button variant="secondary" onClick={() => setIsModalOpen(true)}>Khởi tạo Database</Button>
           </CardContent>
         </Card>
       ) : (

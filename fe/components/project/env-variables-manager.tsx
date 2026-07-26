@@ -223,12 +223,12 @@ export function EnvVariablesManager({ projectId }: EnvVariablesManagerProps) {
                 <Key className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Environment Fertilizers</CardTitle>
+                <CardTitle className="text-lg">Biến môi trường</CardTitle>
                 <CardDescription>Biến môi trường được inject vào container</CardDescription>
               </div>
             </div>
             <Badge variant="outline" className="border-border">
-              {envVars.length} variables
+              {envVars.length} biến
             </Badge>
           </div>
         </CardHeader>
@@ -289,12 +289,12 @@ export function EnvVariablesManager({ projectId }: EnvVariablesManagerProps) {
                   <div className="flex items-center gap-2">
                     <Switch checked={isSecret} onCheckedChange={setIsSecret} id="isSecret" />
                     <Label htmlFor="isSecret" className="text-xs text-muted-foreground cursor-pointer">
-                      Secret (hidden)
+                      Bảo mật (ẩn giá trị)
                     </Label>
                   </div>
                   <Button size="sm" onClick={handleAdd} disabled={isSaving} className="bg-primary text-primary-foreground h-8">
                     {isSaving ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Plus className="mr-1.5 h-3 w-3" />}
-                    Add Variable
+                    Thêm biến
                   </Button>
                 </div>
               </>
@@ -308,7 +308,7 @@ export function EnvVariablesManager({ projectId }: EnvVariablesManagerProps) {
             </div>
           ) : envVars.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground py-4">
-              No environment variables yet. Add one above! 🌿
+              Chưa có biến môi trường nào. Hãy thêm ở trên! 🌿
             </p>
           ) : (
             <div className="space-y-2">

@@ -116,7 +116,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6 lg:p-8 max-w-3xl mx-auto">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-foreground">Account Settings</h1>
+        <h1 className="text-2xl font-bold text-foreground">Cài đặt tài khoản</h1>
         <p className="text-muted-foreground mt-1">Quản lý thông tin cá nhân và bảo mật tài khoản của bạn</p>
       </motion.div>
 
@@ -145,11 +145,17 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">{email}</p>
                 <div className="mt-1">
                   {user?.role === "ADMIN" ? (
-                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
-                      <Shield className="h-3 w-3 mr-1" /> System Admin
-                    </Badge>
+                    user?.email === "superadmin@potato.com" ? (
+                      <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">
+                        <Shield className="h-3 w-3 mr-1" /> Super Admin
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                        <Shield className="h-3 w-3 mr-1" /> Admin Project
+                      </Badge>
+                    )
                   ) : (
-                    <Badge variant="secondary" className="text-xs">Developer</Badge>
+                    <Badge variant="secondary" className="text-xs">Nhà phát triển</Badge>
                   )}
                 </div>
               </div>
@@ -159,7 +165,7 @@ export default function SettingsPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="name">Display Name</Label>
+                <Label htmlFor="name">Tên hiển thị</Label>
                 <Input
                   id="name"
                   value={name}
@@ -185,7 +191,7 @@ export default function SettingsPage() {
               disabled={isSavingProfile}
             >
               {isSavingProfile ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save Changes
+              Lưu thay đổi
             </Button>
           </CardContent>
         </Card>
@@ -271,7 +277,7 @@ export default function SettingsPage() {
               disabled={isSavingPassword || !currentPassword || !newPassword}
             >
               {isSavingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
-              Change Password
+              Đổi mật khẩu
             </Button>
           </CardContent>
         </Card>
@@ -291,9 +297,9 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {[
-              { id: "email", label: "Email Notifications", desc: "Nhận email khi có sự kiện quan trọng", value: emailNotifs, setter: setEmailNotifs },
-              { id: "ssl", label: "SSL Expiry Alerts", desc: "Cảnh báo khi chứng chỉ SSL sắp hết hạn", value: sslAlerts, setter: setSslAlerts },
-              { id: "deploy", label: "Deploy Notifications", desc: "Thông báo khi deploy thành công hoặc thất bại", value: deployAlerts, setter: setDeployAlerts },
+              { id: "email", label: "Thông báo qua Email", desc: "Nhận email khi có sự kiện quan trọng", value: emailNotifs, setter: setEmailNotifs },
+              { id: "ssl", label: "Cảnh báo hết hạn SSL", desc: "Cảnh báo khi chứng chỉ SSL sắp hết hạn", value: sslAlerts, setter: setSslAlerts },
+              { id: "deploy", label: "Thông báo Triển khai", desc: "Thông báo khi deploy thành công hoặc thất bại", value: deployAlerts, setter: setDeployAlerts },
             ].map((item) => (
               <div key={item.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-4">
                 <div>
@@ -305,7 +311,7 @@ export default function SettingsPage() {
             ))}
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => toast.success("Cài đặt thông báo đã được lưu!")}>
               <Save className="mr-2 h-4 w-4" />
-              Save Preferences
+              Lưu cài đặt
             </Button>
           </CardContent>
         </Card>
@@ -318,7 +324,7 @@ export default function SettingsPage() {
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-400" />
               <div>
-                <CardTitle className="text-lg text-red-400">Danger Zone</CardTitle>
+                <CardTitle className="text-lg text-red-400">Vùng nguy hiểm</CardTitle>
                 <CardDescription>Các thao tác không thể hoàn tác</CardDescription>
               </div>
             </div>
@@ -335,7 +341,7 @@ export default function SettingsPage() {
                 onClick={() => setDeleteAccountOpen(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete Account
+                Xóa tài khoản
               </Button>
               <ConfirmDialog
                 open={deleteAccountOpen}

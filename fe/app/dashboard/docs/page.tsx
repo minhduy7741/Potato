@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 const docSections = [
   {
     icon: Zap,
-    title: "Quick Start",
+    title: "Bắt đầu nhanh",
     color: "text-yellow-400",
     bg: "bg-yellow-500/10 border-yellow-500/20",
     articles: [
@@ -24,7 +24,7 @@ const docSections = [
   },
   {
     icon: Globe,
-    title: "Domain & Networking",
+    title: "Tên miền & Mạng",
     color: "text-blue-400",
     bg: "bg-blue-500/10 border-blue-500/20",
     articles: [
@@ -35,7 +35,7 @@ const docSections = [
   },
   {
     icon: Lock,
-    title: "SSL & Security",
+    title: "Bảo mật & SSL",
     color: "text-emerald-400",
     bg: "bg-emerald-500/10 border-emerald-500/20",
     articles: [
@@ -46,7 +46,7 @@ const docSections = [
   },
   {
     icon: Terminal,
-    title: "Logs & Monitoring",
+    title: "Giám sát & Logs",
     color: "text-purple-400",
     bg: "bg-purple-500/10 border-purple-500/20",
     articles: [
@@ -57,7 +57,7 @@ const docSections = [
   },
   {
     icon: Database,
-    title: "Database Management",
+    title: "Quản lý Cơ sở dữ liệu",
     color: "text-orange-400",
     bg: "bg-orange-500/10 border-orange-500/20",
     articles: [
@@ -68,7 +68,7 @@ const docSections = [
   },
   {
     icon: Cpu,
-    title: "Resource Control",
+    title: "Kiểm soát tài nguyên",
     color: "text-red-400",
     bg: "bg-red-500/10 border-red-500/20",
     articles: [
@@ -113,7 +113,7 @@ export default function DocsPage() {
             <BookOpen className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Documentation</h1>
+            <h1 className="text-2xl font-bold text-foreground">Tài liệu hướng dẫn</h1>
             <p className="text-sm text-muted-foreground">Hướng dẫn sử dụng toàn diện cho Potato IDP</p>
           </div>
         </div>

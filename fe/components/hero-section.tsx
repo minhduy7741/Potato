@@ -26,7 +26,7 @@ export function HeroSection() {
           >
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm text-muted-foreground">
-              Internal Developer Platform
+              Nền tảng phát triển nội bộ (IDP)
             </span>
           </motion.div>
 
@@ -37,7 +37,7 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="max-w-4xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl"
           >
-            <span className="text-balance">Mash Your Deployments with </span>
+            <span className="text-balance">Triển khai thần tốc cùng </span>
             <span className="text-primary">Potato</span>
           </motion.h1>
 
@@ -48,7 +48,7 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl"
           >
-            {"Fry up a new app in seconds. The friendly internal developer platform that makes infrastructure as easy as ordering fries."}
+            {"Khởi tạo ứng dụng mới trong vài giây. Nền tảng phát triển nội bộ thân thiện giúp quản lý hạ tầng dễ dàng như ăn khoai tây chiên."}
           </motion.p>
 
           {/* CTA Buttons */}
@@ -64,7 +64,7 @@ export function HeroSection() {
               asChild
             >
               <Link href="/login">
-                Get Started
+                Bắt đầu ngay
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -73,7 +73,7 @@ export function HeroSection() {
               variant="outline"
               className="border-border text-foreground hover:bg-card"
             >
-              Watch Demo
+              Xem Demo
             </Button>
           </motion.div>
 
@@ -112,10 +112,10 @@ export function HeroSection() {
             className="mt-16 grid grid-cols-2 gap-8 md:grid-cols-4"
           >
             {[
-              { value: "10K+", label: "Deployments" },
-              { value: "99.9%", label: "Uptime" },
-              { value: "500+", label: "Teams" },
-              { value: "<30s", label: "Deploy Time" },
+              { value: "10K+", label: "Lượt triển khai" },
+              { value: "99.9%", label: "Hoạt động liên tục" },
+              { value: "500+", label: "Đội ngũ tin dùng" },
+              { value: "<30s", label: "Thời gian deploy" },
             ].map((stat, index) => (
               <div key={index} className="text-center">
                 <p className="text-2xl font-bold text-primary md:text-3xl">

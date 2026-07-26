@@ -163,9 +163,9 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
               }`}>
                 {getStatusIcon(project.deployStatus === "deploying" ? "running" : project.deployStatus)}
                 <span className="text-sm font-medium">
-                  {project.deployStatus === "success" && `Last deploy successful${project.lastDeployedAt ? ` · ${new Date(project.lastDeployedAt).toLocaleString()}` : ""}`}
-                  {project.deployStatus === "failed" && "Last deploy failed"}
-                  {project.deployStatus === "deploying" && "Deployment in progress..."}
+                  {project.deployStatus === "success" && `Triển khai lần cuối thành công${project.lastDeployedAt ? ` · ${new Date(project.lastDeployedAt).toLocaleString()}` : ""}`}
+                  {project.deployStatus === "failed" && "Triển khai lần cuối thất bại"}
+                  {project.deployStatus === "deploying" && "Đang tiến hành triển khai..."}
                 </span>
               </div>
             )}

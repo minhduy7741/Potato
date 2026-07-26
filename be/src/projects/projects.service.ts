@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import simpleGit from 'simple-git';
 import * as tar from 'tar-fs';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProjectRole } from '@prisma/client';
 import { DockerService } from '../docker/docker.service';
 import { NginxService } from '../infrastructure/nginx.service';
 import { SslService } from '../infrastructure/ssl.service';
@@ -84,6 +85,21 @@ export class ProjectsService {
         subdomain,
         userId,
         hostPort,
+      },
+    });
+
+    // Automatically add creator as LEADER
+    await this.prisma.projectMember.create({
+      data: {
+        userId,
+        projectId: project.id,
+        role: 'LEADER',
+        permissions: [
+          'project:read', 'project:start', 'project:stop', 'project:restart', 
+          'project:hibernate', 'project:delete', 'project:settings', 
+          'project:resources', 'project:deploy', 'env:read', 'env:write', 
+          'member:manage', 'database:manage'
+        ],
       },
     });
 
@@ -565,12 +581,170 @@ export class ProjectsService {
    * Returns all projects, optionally filtered by userId.
    */
   async findAll(userId?: number) {
-    const where = userId ? { userId } : {};
+    const ALL_ACTIONS = [
+      'project:read', 'project:start', 'project:stop', 'project:restart', 
+      'project:hibernate', 'project:delete', 'project:settings', 
+      'project:resources', 'project:deploy', 'env:read', 'env:write', 
+      'member:manage', 'database:manage'
+    ];
+
+    if (userId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { customRole: true },
+      });
+      if (user) {
+        const isSuperAdmin = user.role === 'ADMIN' && user.email === 'superadmin@potato.com';
+        const isTenantAdmin = user.role === 'ADMIN' && user.email !== 'superadmin@potato.com';
+        const hasGlobalRead = user.customRole?.permissions?.includes('project:read');
+
+        if (isSuperAdmin || hasGlobalRead) {
+          // Super Admin và các vai trò có quyền project:read toàn cục nhìn thấy tất cả các dự án
+          const projects = await this.prisma.project.findMany({
+            include: { databases: true, members: true },
+            orderBy: { createdAt: 'desc' },
+          });
+          return projects.map(p => ({
+            ...p,
+            memberRole: isSuperAdmin ? 'LEADER' : 'MEMBER',
+            memberPermissions: isSuperAdmin ? ALL_ACTIONS : (user.customRole?.permissions || []),
+          }));
+        } else if (isTenantAdmin) {
+          // Admin doanh nghiệp nhìn thấy tất cả dự án thuộc doanh nghiệp của mình (của mình hoặc nhân viên)
+          const projects = await this.prisma.project.findMany({
+            where: {
+              OR: [
+                { userId },
+                { user: { parentId: userId } }
+              ]
+            },
+            include: { databases: true, members: true },
+            orderBy: { createdAt: 'desc' },
+          });
+          return projects.map(p => ({
+            ...p,
+            memberRole: 'LEADER',
+            memberPermissions: ALL_ACTIONS,
+          }));
+        } else {
+          // DEVELOPER chỉ nhìn thấy dự án mà họ là thành viên
+          const memberships = await this.prisma.projectMember.findMany({
+            where: { userId },
+            include: {
+              project: {
+                include: { databases: true },
+              },
+              user: {
+                include: { customRole: true },
+              },
+            },
+          });
+
+          return memberships.map(m => {
+            const p = m.project;
+            let perms = m.permissions || [];
+            if (m.role === 'LEADER') {
+              perms = ALL_ACTIONS;
+            } else {
+              // Hợp nhất quyền dự án với quyền Custom Role toàn cục
+              const globalPerms = m.user?.customRole?.permissions || [];
+              perms = Array.from(new Set([...perms, ...globalPerms]));
+            }
+            return {
+              ...p,
+              memberRole: m.role,
+              memberPermissions: perms,
+            };
+          });
+        }
+      }
+    }
+
     return this.prisma.project.findMany({
-      where,
       include: { databases: true },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Thêm hoặc cập nhật vai trò/quyền của thành viên trong dự án.
+   */
+  async addProjectMember(projectId: number, userId: number, role: ProjectRole, permissions: string[]) {
+    const project = await this.findProjectOrFail(projectId);
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Người dùng không tồn tại.');
+
+    const existing = await this.prisma.projectMember.findUnique({
+      where: {
+        userId_projectId: { userId, projectId },
+      },
+    });
+
+    const ALL_ACTIONS = [
+      'project:read', 'project:start', 'project:stop', 'project:restart', 
+      'project:hibernate', 'project:delete', 'project:settings', 
+      'project:resources', 'project:deploy', 'env:read', 'env:write', 
+      'member:manage', 'database:manage'
+    ];
+
+    const finalPermissions = permissions || (role === 'LEADER' ? ALL_ACTIONS : ['project:read']);
+
+    if (existing) {
+      return this.prisma.projectMember.update({
+        where: { id: existing.id },
+        data: { role, permissions: finalPermissions },
+      });
+    }
+
+    return this.prisma.projectMember.create({
+      data: {
+        userId,
+        projectId,
+        role,
+        permissions: finalPermissions,
+      },
+    });
+  }
+
+  /**
+   * Lấy danh sách thành viên dự án
+   */
+  async getProjectMembers(projectId: number) {
+    await this.findProjectOrFail(projectId);
+    return this.prisma.projectMember.findMany({
+      where: { projectId },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+  }
+
+  /**
+   * Cập nhật vai trò thành viên dự án
+   */
+  async updateProjectMember(projectId: number, memberId: number, role: ProjectRole) {
+    const member = await this.prisma.projectMember.findUnique({ where: { id: memberId } });
+    if (!member || member.projectId !== projectId) {
+      throw new NotFoundException('Không tìm thấy thành viên trong dự án.');
+    }
+    return this.prisma.projectMember.update({
+      where: { id: memberId },
+      data: { role },
+    });
+  }
+
+  /**
+   * Xóa thành viên khỏi dự án
+   */
+  async deleteProjectMember(projectId: number, memberId: number) {
+    const member = await this.prisma.projectMember.findUnique({ where: { id: memberId } });
+    if (!member || member.projectId !== projectId) {
+      throw new NotFoundException('Không tìm thấy thành viên trong dự án.');
+    }
+    return this.prisma.projectMember.delete({ where: { id: memberId } });
   }
 
   /**
@@ -1241,11 +1415,11 @@ EXPOSE 80
 
       await updateLog(`Thu hoạch thành công sau ${duration}s! 🥔🚀`);
 
-      // Trigger Discord success alert if enabled
+      // Trigger Slack success alert if enabled
       const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
-      if (projectData?.discordWebhook) {
-        this.sendDiscordAlert(
-          projectData.discordWebhook,
+      if (projectData?.slackWebhook) {
+        this.sendSlackAlert(
+          projectData.slackWebhook,
           project.name,
           'success',
           `Phiên bản mới đã được cập nhật thành công!\n**Commit:** ${latestCommit?.hash?.substring(0, 7) || 'N/A'}\n**Nội dung:** ${latestCommit?.message || 'Manual deploy'}\n**Thời gian chạy:** ${duration}s`
@@ -1266,11 +1440,11 @@ EXPOSE 80
         data: { deployStatus: 'failed' },
       });
 
-      // Send Discord fail alert
+      // Send Slack fail alert
       const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
-      if (projectData?.discordWebhook) {
-        this.sendDiscordAlert(
-          projectData.discordWebhook,
+      if (projectData?.slackWebhook) {
+        this.sendSlackAlert(
+          projectData.slackWebhook,
           project.name,
           'failed',
           `Quá trình triển khai gặp lỗi:\n\`\`\`\n${msg}\n\`\`\`\n**Thời gian chạy:** ${duration}s`
@@ -1442,11 +1616,12 @@ EXPOSE 80
     return 'No logs found for this project.';
   }
 
-  async updateSettings(id: number, volumeMapping?: string, discordWebhook?: string) {
+  async updateSettings(id: number, volumeMapping?: string, slackWebhook?: string, alertInterval?: number) {
     await this.findProjectOrFail(id);
     const data: any = {};
     if (volumeMapping !== undefined) data.volumeMapping = volumeMapping;
-    if (discordWebhook !== undefined) data.discordWebhook = discordWebhook;
+    if (slackWebhook !== undefined) data.slackWebhook = slackWebhook;
+    if (alertInterval !== undefined) data.alertInterval = alertInterval;
 
     return this.prisma.project.update({
       where: { id },
@@ -1454,26 +1629,57 @@ EXPOSE 80
     });
   }
 
-  private async sendDiscordAlert(webhookUrl: string, projectName: string, status: 'success' | 'failed', detailMessage: string) {
+  async sendTestAlert(id: number) {
+    const project = await this.prisma.project.findUnique({
+      where: { id },
+      select: { id: true, name: true, slackWebhook: true, containerId: true, status: true },
+    });
+    if (!project) throw new Error('Dự án không tồn tại');
+    if (!project.slackWebhook) throw new Error('Chưa cấu hình Slack Webhook cho dự án này');
+
+    let statsLine = '_Dự án không đang chạy, không có thông số thực tế._';
+    if (project.status === 'running' && project.containerId) {
+      try {
+        const stats = await this.dockerService.getContainerStats(project.containerId);
+        statsLine = `CPU: *${stats.cpuPercent.toFixed(1)}%* | RAM: *${stats.memoryUsageMB.toFixed(0)}MB* / ${stats.memoryLimitMB.toFixed(0)}MB (${stats.memoryPercent.toFixed(1)}%)`;
+      } catch {
+        statsLine = '_Không lấy được thông số container lúc này._';
+      }
+    }
+
+    await this.sendSlackAlert(
+      project.slackWebhook,
+      project.name,
+      'success',
+      `🧪 *Đây là tin nhắn thử nghiệm từ Potato!*\n\nKết nối Slack Webhook của dự án *${project.name}* hoạt động bình thường ✅\n\n📊 Thông số hiện tại: ${statsLine}\n\n_Bạn sẽ nhận được tin nhắn tương tự khi CPU / RAM / Disk vượt ngưỡng cảnh báo._`,
+    );
+
+    return { ok: true, message: 'Đã gửi tin nhắn thử nghiệm về Slack thành công!' };
+  }
+
+  public async sendSlackAlert(webhookUrl: string, projectName: string, status: 'success' | 'failed' | 'warning', detailMessage: string) {
     if (!webhookUrl) return;
     try {
       const http = require('https');
       
       const payload = {
-        username: 'Potato IDP Alert',
-        avatar_url: 'https://i.imgur.com/8QWv77v.png',
-        embeds: [{
-          title: status === 'success' ? `🚀 Triển khai thành công: ${projectName}` : `⚠️ Triển khai THẤT BẠI: ${projectName}`,
-          color: status === 'success' ? 3066993 : 15158332,
-          description: detailMessage,
-          timestamp: new Date().toISOString(),
-          footer: {
-            text: 'Potato Internal Developer Platform'
+        text: status === 'success' 
+          ? `🚀 *Thông báo từ Potato: ${projectName}*` 
+          : status === 'warning'
+            ? `⚠️ *Cảnh báo từ Potato: ${projectName}*`
+            : `🚨 *Lỗi nghiêm trọng từ Potato: ${projectName}*`,
+        attachments: [
+          {
+            color: status === 'success' ? '#2eb886' : status === 'warning' ? '#e0a800' : '#a30200',
+            text: detailMessage,
+            fallback: detailMessage,
+            ts: Math.floor(Date.now() / 1000)
           }
-        }]
+        ]
       };
 
       const dataStr = JSON.stringify(payload);
+      const dataBuffer = Buffer.from(dataStr, 'utf8');
       const url = new URL(webhookUrl);
       
       const options = {
@@ -1482,18 +1688,26 @@ EXPOSE 80
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Content-Length': dataStr.length
+          'Content-Length': dataBuffer.byteLength
         }
       };
 
-      const req = http.request(options);
-      req.on('error', (e: any) => {
-        this.logger.warn(`Failed to send Discord alert: ${e.message}`);
+      const req = http.request(options, (res: any) => {
+        let body = '';
+        res.on('data', (chunk: any) => body += chunk);
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            this.logger.warn(`Slack webhook returned ${res.statusCode}: ${body}`);
+          }
+        });
       });
-      req.write(dataStr);
+      req.on('error', (e: any) => {
+        this.logger.warn(`Failed to send Slack alert: ${e.message}`);
+      });
+      req.write(dataBuffer);
       req.end();
     } catch (err: any) {
-      this.logger.warn(`Error sending Discord alert: ${err.message}`);
+      this.logger.warn(`Error sending Slack alert: ${err.message}`);
     }
   }
 
@@ -1719,9 +1933,9 @@ EXPOSE 80
       await this.logActivity(project.id, 'DEPLOY', `Rollback về phiên bản #${gitCommit?.substring(0, 7) || ''} thành công.`);
       
       const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
-      if (projectData?.discordWebhook) {
-        this.sendDiscordAlert(
-          projectData.discordWebhook,
+      if (projectData?.slackWebhook) {
+        this.sendSlackAlert(
+          projectData.slackWebhook,
           project.name,
           'success',
           `Đã quay lui (rollback) về phiên bản thành công!\n**Commit:** ${gitCommit?.substring(0, 7) || 'N/A'}\n**Thời gian chạy:** ${duration}s`
@@ -1744,9 +1958,9 @@ EXPOSE 80
       await this.logActivity(project.id, 'DEPLOY', `Rollback thất bại: ${err.message}`);
 
       const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
-      if (projectData?.discordWebhook) {
-        this.sendDiscordAlert(
-          projectData.discordWebhook,
+      if (projectData?.slackWebhook) {
+        this.sendSlackAlert(
+          projectData.slackWebhook,
           project.name,
           'failed',
           `Quá trình quay lui (rollback) gặp lỗi:\n\`\`\`\n${err.message}\n\`\`\`\n**Thời gian chạy:** ${duration}s`
@@ -1784,9 +1998,9 @@ EXPOSE 80
             try {
               await this.dockerService.startContainer(project.containerId!);
               
-              if (project.discordWebhook) {
-                await this.sendDiscordAlert(
-                  project.discordWebhook,
+              if (project.slackWebhook) {
+                await this.sendSlackAlert(
+                  project.slackWebhook,
                   project.name,
                   'success',
                   `⚠️ **Cảnh báo:** Container bị tắt đột ngột (Exit Code: ${containerState.exitCode}).\n🔄 **Hành động:** Đã kích hoạt cơ chế tự động khởi động lại (Restart Policy: ${project.restartPolicy}) thành công.`
@@ -1794,9 +2008,9 @@ EXPOSE 80
               }
             } catch (restartErr: any) {
               this.logger.error(`Failed to auto-restart project ${project.id}: ${restartErr.message}`);
-              if (project.discordWebhook) {
-                await this.sendDiscordAlert(
-                  project.discordWebhook,
+              if (project.slackWebhook) {
+                await this.sendSlackAlert(
+                  project.slackWebhook,
                   project.name,
                   'failed',
                   `🚨 **Cảnh báo:** Container bị tắt đột ngột (Exit Code: ${containerState.exitCode}).\n❌ **Hành động:** Thử tự động khởi động lại thất bại: ${restartErr.message}`
@@ -1817,9 +2031,9 @@ EXPOSE 80
               }
             });
 
-            if (project.discordWebhook) {
-              await this.sendDiscordAlert(
-                project.discordWebhook,
+            if (project.slackWebhook) {
+              await this.sendSlackAlert(
+                project.slackWebhook,
                 project.name,
                 'failed',
                 `🚨 **Cảnh báo:** Container bị tắt đột ngột (Exit Code: ${containerState.exitCode}). Không cấu hình tự khởi động lại.`
@@ -1828,7 +2042,24 @@ EXPOSE 80
           }
         }
       } catch (err: any) {
-        this.logger.error(`Error monitoring health of project ${project.id}: ${err.message}`);
+        const isNotFound = err.message?.toLowerCase().includes('no such container') || err.statusCode === 404 || err.status === 404;
+        if (isNotFound) {
+          this.logger.warn(`Container for project "${project.name}" (${project.id}) was not found in Docker. Resetting status to stopped.`);
+          await this.prisma.project.update({
+            where: { id: project.id },
+            data: { status: 'stopped', containerId: null },
+          }).catch(() => {});
+          
+          await this.prisma.activityLog.create({
+            data: {
+              projectId: project.id,
+              type: 'STOP',
+              message: `Không tìm thấy container của dự án trên hệ thống Docker. Trạng thái đã được tự động đưa về Stopped.`
+            }
+          }).catch(() => {});
+        } else {
+          this.logger.error(`Error monitoring health of project ${project.id}: ${err.message}`);
+        }
       }
     }
   }

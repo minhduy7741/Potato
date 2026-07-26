@@ -29,7 +29,9 @@ export class LogsGateway
   constructor(
     private readonly prismaService: PrismaService,
     private readonly containerLogService: ContainerLogService,
-  ) {}
+  ) {
+    console.log("===> LogsGateway instantiated! <===");
+  }
 
   /**
    * Lifecycle: client connected.

@@ -138,7 +138,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
+          Quay lại Dashboard
         </Link>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -177,19 +177,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             {project.status === "running" ? (
               <Button size="sm" variant="outline" className="border-red-500/30 text-red-400 hover:bg-red-500/10" onClick={handleStop}>
                 <XCircle className="mr-2 h-4 w-4" />
-                Stop
+                Dừng
               </Button>
             ) : (
               <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleStart}>
                 {project.status === "hibernated" ? (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    Wake Up
+                    Đánh thức
                   </>
                 ) : (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    Start Plot
+                    Khởi động
                   </>
                 )}
               </Button>
@@ -197,12 +197,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <Button variant="outline" size="sm" className="border-border hover:bg-primary/10 hover:text-primary" onClick={fetchProject}>
               <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-              Refresh
+              Làm mới
             </Button>
             <Button variant="outline" size="sm" className="border-border hover:bg-primary/10 hover:text-primary" asChild>
               <Link href={project.hostPort ? `http://localhost:${project.hostPort}` : `http://${project.subdomain}.potato.local`} target="_blank">
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Visit URL
+                Truy cập URL
               </Link>
             </Button>
             <DropdownMenu>
@@ -212,10 +212,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
-                <DropdownMenuItem onClick={handleRestart}>Restart Plot</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleClone}>Clone Plot</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleRestart}>Khởi động lại</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleClone}>Nhân bản</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-400" onClick={() => setDeleteConfirmOpen(true)}>Delete Plot</DropdownMenuItem>
+                <DropdownMenuItem className="text-red-400" onClick={() => setDeleteConfirmOpen(true)}>Xóa dự án</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <ConfirmDialog
@@ -239,24 +239,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="w-full justify-start bg-muted/50 p-1 rounded-xl mb-4 flex-wrap h-auto gap-1">
             <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              Overview
+              Tổng quan
             </TabsTrigger>
             <TabsTrigger value="deploy" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               <GitBranch className="mr-1.5 h-3.5 w-3.5" />
-              Git Deploy
+              Triển khai Git
             </TabsTrigger>
             <TabsTrigger value="env" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               <Key className="mr-1.5 h-3.5 w-3.5" />
-              Fertilizers
+              Biến môi trường
             </TabsTrigger>
             <TabsTrigger value="logs" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              Logs
+              Nhật ký Logs
             </TabsTrigger>
             <TabsTrigger value="metrics" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              Metrics
+              Thông số Metrics
             </TabsTrigger>
             <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              Settings
+              Cài đặt
             </TabsTrigger>
           </TabsList>
 

@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 import { ValidationPipe } from '@nestjs/common';
 import * as fs from 'fs';
@@ -27,6 +28,9 @@ async function bootstrap() {
 
   // Enable CORS for frontend development
   app.enableCors();
+  
+  // Enable WebSocket adapter
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
