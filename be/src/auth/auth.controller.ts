@@ -12,13 +12,13 @@ export class AuthController {
     private readonly authService: AuthService,
   ) {}
 
-  /** POST /api/auth/register — Creates a new account and returns a JWT token */
+  /** POST /api/auth/register — Tạo tài khoản người dùng mới (Nhân viên mới) */
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
-  /** POST /api/auth/login — Validates credentials and returns a JWT token */
+  /** POST /api/auth/login — Đăng nhập hệ thống, trả về Token (JWT) */
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto) {
@@ -26,8 +26,8 @@ export class AuthController {
   }
 
   /**
-   * GET /api/auth/me — Returns the currently authenticated user's profile.
-   * Reads the userId from the JWT payload (req.user.id), no body needed.
+   * GET /api/auth/me — Lấy thông tin hồ sơ của tài khoản đang đăng nhập hiện tại.
+   * Lấy ID người dùng từ bên trong cục Token (req.user.id) nên siêu bảo mật.
    */
   @Get('me')
   @UseGuards(JwtAuthGuard)
@@ -36,8 +36,8 @@ export class AuthController {
   }
 
   /**
-   * POST /api/auth/change-password — Protected: changes password for current user.
-   * userId is read from the JWT token, not from the request body.
+   * POST /api/auth/change-password — (Bảo vệ) Đổi mật khẩu cho người dùng hiện tại.
+   * Tương tự, ID người dùng lấy từ Token chứ không lấy từ Request Body để tránh bị hack.
    */
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
@@ -47,8 +47,8 @@ export class AuthController {
   }
 
   /**
-   * PATCH /api/auth/me — Protected: updates the display name for current user.
-   * userId is read from the JWT token, not from the request body.
+   * PATCH /api/auth/me — (Bảo vệ) Cập nhật Tên hiển thị (Tên cá nhân) cho người dùng hiện tại.
+   * Vẫn tuân thủ nguyên tắc lấy ID từ Token.
    */
   @Patch('me')
   @UseGuards(JwtAuthGuard)
@@ -57,7 +57,7 @@ export class AuthController {
   }
 
   /**
-   * DELETE /api/auth/me — Protected: deletes the current user account and all their projects.
+   * DELETE /api/auth/me — (Bảo vệ) Xóa tài khoản hiện tại và Bóp cò xóa luôn toàn bộ dự án của họ.
    */
   @Delete('me')
   @UseGuards(JwtAuthGuard)

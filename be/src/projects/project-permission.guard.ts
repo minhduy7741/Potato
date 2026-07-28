@@ -46,7 +46,7 @@ export class ProjectPermissionGuard implements CanActivate {
     // Nếu hành động là quyền hệ thống, đối chiếu với Custom Role
     if (requiredPermission.startsWith('system:')) {
       if (globalPermissions.includes(requiredPermission)) return true;
-      throw new ForbiddenException(`Bạn không có quyền hệ thống để thực hiện hành động này (Yêu cầu: ${requiredPermission}).`);
+      throw new ForbiddenException(`Bạn không có quyền thực hiện thao tác này. Vui lòng liên hệ Quản trị viên để được cấp quyền.`);
     }
 
     // 4. Xác định Project ID từ request
@@ -110,7 +110,7 @@ export class ProjectPermissionGuard implements CanActivate {
     }
 
     throw new ForbiddenException(
-      `Vai trò hệ thống của bạn không có quyền thực hiện hành động này trong dự án (Yêu cầu: ${requiredPermission}).`
+      `Bạn không có quyền thực hiện thao tác này. Vui lòng liên hệ Quản trị viên để được cấp quyền.`
     );
   }
 }

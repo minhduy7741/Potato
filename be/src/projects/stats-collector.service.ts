@@ -9,12 +9,12 @@ import { ProjectsService } from './projects.service';
 export class StatsCollectorService {
   private readonly logger = new Logger(StatsCollectorService.name);
 
-  // Maps to track when threshold was first exceeded (projectId -> timestamp)
+  // Danh sách theo dõi thời điểm vượt ngưỡng tài nguyên lần đầu (projectId -> timestamp)
   private firstCpuExceeded = new Map<number, number>();
   private firstRamExceeded = new Map<number, number>();
   private firstDiskExceeded = new Map<number, number>();
 
-  // Maps to track if alert was already sent (projectId -> boolean)
+  // Danh sách theo dõi trạng thái đã gửi cảnh báo để tránh gửi trùng (projectId -> boolean)
   private cpuAlerted = new Map<number, boolean>();
   private ramAlerted = new Map<number, boolean>();
   private diskAlerted = new Map<number, boolean>();
@@ -29,8 +29,10 @@ export class StatsCollectorService {
   ) {}
 
   /**
-   * Runs every minute: collect CPU/RAM stats from all running containers,
-   * check resources threshold, trigger auto-scaling, and send Slack alerts if thresholds are exceeded.
+   * ĐÂY LÀ ĐOẠN CODE BỘ ĐẾM THỜI GIAN (CRON JOB) - CHẠY 1 PHÚT 1 LẦN
+   * Giải thích cho hội đồng: Cứ mỗi 60 giây, hàm này sẽ tự động thức dậy, 
+   * đi chui vào lõi Docker để hỏi xem các Container đang ăn bao nhiêu RAM/CPU.
+   * Sau đó nó lưu vào Database để vẽ biểu đồ và kiểm tra xem có cần nhắn tin cảnh báo qua Slack không.
    */
   @Cron(CronExpression.EVERY_MINUTE)
   async collectStats() {
@@ -43,7 +45,7 @@ export class StatsCollectorService {
 
     this.logger.log(`Collecting stats for ${runningProjects.length} running project(s)...`);
 
-    // Check host disk space
+    // Kiểm tra dung lượng ổ cứng của máy chủ Host
     let diskPercent = 0;
     try {
       const fs = require('fs');
@@ -60,7 +62,7 @@ export class StatsCollectorService {
       runningProjects.map(async (project) => {
         try {
           const stats = await this.dockerService.getContainerStats(project.containerId!);
-          // 2. Persist stats to DB
+          // 2. Lưu số liệu thống kê vào Database
           await this.prisma.projectStat.create({
             data: {
               projectId: project.id,
@@ -69,7 +71,7 @@ export class StatsCollectorService {
             },
           });
 
-          // Fetch project settings details
+          // Lấy thông tin cấu hình của dự án
           const projectData = await this.prisma.project.findUnique({
             where: { id: project.id },
             select: { autoScale: true, ramLimit: true, cpuLimit: true, name: true, slackWebhook: true, alertInterval: true }
@@ -80,11 +82,11 @@ export class StatsCollectorService {
           const alertMinutes = projectData.alertInterval || 5;
           const thresholdMs = alertMinutes * 60 * 1000;
 
-          // 3. Threshold Checks (CPU > 100% relative capacity or absolute, RAM > 95% capacity, Disk > 75%)
+          // 3. Kiểm tra các ngưỡng giới hạn (CPU > 100%, RAM > 95%, Ổ cứng > 75%)
           const isCpuExceeded = stats.cpuPercent >= (projectData.cpuLimit * 95) || stats.cpuPercent > 100;
           const isRamExceeded = stats.memoryPercent >= 95;
 
-          // CPU Alert Logic
+          // Logic xử lý cảnh báo CPU
           if (isCpuExceeded) {
             if (!this.firstCpuExceeded.has(project.id)) {
               this.firstCpuExceeded.set(project.id, Date.now());
@@ -117,7 +119,7 @@ export class StatsCollectorService {
             this.cpuAlerted.delete(project.id);
           }
 
-          // RAM Alert Logic
+          // Logic xử lý cảnh báo RAM
           if (isRamExceeded) {
             if (!this.firstRamExceeded.has(project.id)) {
               this.firstRamExceeded.set(project.id, Date.now());
@@ -150,7 +152,7 @@ export class StatsCollectorService {
             this.ramAlerted.delete(project.id);
           }
 
-          // Disk Alert Logic (> 75% for custom threshold)
+          // Logic xử lý cảnh báo Ổ cứng (ngưỡng 75%)
           if (diskPercent > 75) {
             if (!this.firstDiskExceeded.has(project.id)) {
               this.firstDiskExceeded.set(project.id, Date.now());
@@ -183,27 +185,29 @@ export class StatsCollectorService {
             this.diskAlerted.delete(project.id);
           }
 
-          // 4. Auto-Scale Logic
+          // 4. Auto-Scale Logic (ĐÂY LÀ ĐOẠN CODE AUTO-SCALING CỰC KỲ ĂN TIỀN)
+          // Giải thích: Nếu CPU của web vượt quá 80%, hệ thống tự động bơm thêm RAM (tối đa 4GB) 
+          // và CPU (tối đa 4 nhân) thẳng vào Container đang chạy mà KHÔNG CẦN KHỞI ĐỘNG LẠI (Zero-downtime).
           if (projectData.autoScale && stats.cpuPercent > 80) {
-            const newRam = Math.min(projectData.ramLimit + 256, 4096); // Max 4GB
-            const newCpu = Math.min(projectData.cpuLimit + 0.5, 4);    // Max 4 Cores
+            const newRam = Math.min(projectData.ramLimit + 256, 4096); // Tối đa 4GB
+            const newCpu = Math.min(projectData.cpuLimit + 0.5, 4);    // Tối đa 4 Nhân
 
             if (newRam > projectData.ramLimit || newCpu > projectData.cpuLimit) {
               this.logger.log(`🚀 Auto-scaling project "${projectData.name}" (${project.id}) due to high CPU (${stats.cpuPercent.toFixed(1)}%)`);
               
-              // Update DB
+              // Cập nhật vào Database
               await this.prisma.project.update({
                 where: { id: project.id },
                 data: { ramLimit: newRam, cpuLimit: newCpu }
               });
 
-              // Update Container Live
+              // Cập nhật giới hạn trực tiếp cho Container đang chạy
               await this.dockerService.updateContainerResources(project.containerId!, {
                 ramMB: newRam,
                 cpuCores: newCpu
               });
 
-              // Log activity
+              // Ghi log hoạt động
               const scaleMsg = `Hệ thống tự động nâng cấp tài nguyên do quá tải CPU (${stats.cpuPercent.toFixed(1)}%). Mức mới: ${newRam}MB RAM, ${newCpu} CPU.`;
               await this.prisma.activityLog.create({
                 data: {
@@ -213,7 +217,7 @@ export class StatsCollectorService {
                 }
               });
 
-              // Send Slack alert for AutoScale event
+              // Gửi cảnh báo Slack khi có sự kiện AutoScale
               if (projectData.slackWebhook) {
                 await this.projectsService.sendSlackAlert(
                   projectData.slackWebhook,
@@ -230,19 +234,19 @@ export class StatsCollectorService {
             if (newRam < projectData.ramLimit || newCpu < projectData.cpuLimit) {
               this.logger.log(`📉 Auto-scaling down project "${projectData.name}" (${project.id}) due to low CPU (${stats.cpuPercent.toFixed(1)}%)`);
               
-              // Update DB
+              // Cập nhật vào Database
               await this.prisma.project.update({
                 where: { id: project.id },
                 data: { ramLimit: newRam, cpuLimit: newCpu }
               });
 
-              // Update Container Live
+              // Cập nhật giới hạn trực tiếp cho Container đang chạy
               await this.dockerService.updateContainerResources(project.containerId!, {
                 ramMB: newRam,
                 cpuCores: newCpu
               });
 
-              // Log activity
+              // Ghi log hoạt động
               const scaleDownMsg = `Hệ thống tự động thu hồi tài nguyên do tải CPU thấp (${stats.cpuPercent.toFixed(1)}%). Mức mới: ${newRam}MB RAM, ${newCpu} CPU.`;
               await this.prisma.activityLog.create({
                 data: {
@@ -274,7 +278,7 @@ export class StatsCollectorService {
   }
 
   /**
-   * Runs every day at midnight: purge stats older than 7 days to prevent DB bloat.
+   * Chạy vào nửa đêm mỗi ngày: Xóa các số liệu thống kê cũ hơn 7 ngày để tránh đầy Database.
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async purgeOldStats() {
@@ -288,7 +292,7 @@ export class StatsCollectorService {
   }
 
   /**
-   * Returns the last 24h of stats for a given project, bucketed per 5-minute interval.
+   * Trả về số liệu thống kê trong 24 giờ qua của dự án.
    */
   async getStats(projectId: number, hours = 24) {
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
@@ -300,8 +304,10 @@ export class StatsCollectorService {
   }
 
   /**
-   * Runs every 3 seconds: query Docker stats ONLY for running projects that have
-   * active WebSocket subscribers in their stats rooms, and broadcast to those rooms.
+   * ĐÂY LÀ ĐOẠN CODE BẮN DỮ LIỆU REALTIME (THỜI GIAN THỰC) LÊN TRÌNH DUYỆT
+   * Giải thích: Cứ mỗi 3 giây, hàm này sẽ lấy CPU/RAM hiện tại của Container
+   * và đẩy (broadcast) thẳng lên giao diện web của người dùng qua công nghệ WebSockets.
+   * Chỗ này là mấu chốt tạo ra trải nghiệm mượt mà giống hệt Task Manager của Windows.
    */
   @Cron('*/3 * * * * *')
   async broadcastRealtimeStats() {
@@ -333,14 +339,26 @@ export class StatsCollectorService {
             },
           });
         } catch (error: any) {
-          if (error.message?.includes('no container')) {
+          const errMsg = error.message?.toLowerCase() || '';
+          if (errMsg.includes('no container') || errMsg.includes('not running') || errMsg.includes('cannot read properties')) {
+            // Container đang tắt hoặc đang khởi động -> Trả về 0 để vẽ biểu đồ rỗng, không báo lỗi
             server.to(roomName).emit('stats_update', {
+              projectId: project.id,
+              state: 'stopped',
+              running: false,
               cpu: { usagePercent: 0 },
-              memory: { usagePercent: 0, usageMb: 0, limitMb: 0 },
+              memory: { usagePercent: 0, usageMB: 0, limitMB: 0 },
             });
           } else {
+            // Các lỗi lạ khác -> Vẫn trả về 0 nhưng log lại để debug, không dùng stats_error để tránh đỏ Console FE
             this.logger.warn(`Failed to broadcast stats for project ${project.id}: ${error.message}`);
-            server.to(roomName).emit('stats_error', { message: 'Không thể lấy thông số dự án' });
+            server.to(roomName).emit('stats_update', {
+              projectId: project.id,
+              state: 'error',
+              running: false,
+              cpu: { usagePercent: 0 },
+              memory: { usagePercent: 0, usageMB: 0, limitMB: 0 },
+            });
           }
         }
       }

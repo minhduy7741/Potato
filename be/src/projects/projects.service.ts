@@ -62,7 +62,7 @@ export class ProjectsService {
   async createProject(userId: number, projectName: string) {
     this.logger.log(`Creating project "${projectName}" for user ${userId}`);
 
-    // Validate user exists
+    // Kiểm tra người dùng có tồn tại không
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -70,11 +70,11 @@ export class ProjectsService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    // Generate a unique subdomain from the project name
+    // Tạo một subdomain duy nhất từ tên dự án
     const shortId = randomBytes(4).toString('hex');
     const subdomain = `${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${shortId}`;
 
-    // Allocate a random host port
+    // Cấp phát một cổng Host ngẫu nhiên
     const hostPort = await this.allocatePort();
 
     const project = await this.prisma.project.create({
@@ -88,7 +88,7 @@ export class ProjectsService {
       },
     });
 
-    // Automatically add creator as LEADER
+    // Tự động thêm người tạo làm LEADER (Trưởng dự án)
     await this.prisma.projectMember.create({
       data: {
         userId,
@@ -107,7 +107,7 @@ export class ProjectsService {
 
     this.logger.log(`Project "${projectName}" initialized with ID ${project.id}. Starting background provisioning...`);
 
-    // Launch background provisioning task (not awaited)
+    // Chạy tiến trình cấp phát dự án ngầm (chạy nền)
     this.provisionProjectBackground(project.id, projectName, subdomain, hostPort).catch(err => {
       this.logger.error(`Background provisioning failed for project ${project.id}: ${err.message}`);
     });
@@ -124,7 +124,7 @@ export class ProjectsService {
    * Background task to provision Docker container and Nginx config.
    */
   private async provisionProjectBackground(projectId: number, projectName: string, subdomain: string, hostPort: number) {
-    // Pull the Node.js image
+    // Tải (Pull) Docker image của Node.js
     try {
       await this.dockerService.pullImage(DEFAULT_IMAGE);
     } catch (error) {
@@ -136,13 +136,13 @@ export class ProjectsService {
       return;
     }
 
-    // Create and start the container
+    // Tạo và khởi động Docker container
     try {
       const containerName = `potato-${subdomain}`;
       const envs = await this.prisma.envVariable.findMany({ where: { projectId } });
       const envArray = envs.map(e => `${e.key}=${e.value}`);
 
-      // Fetch restart policy from DB (may have been updated before provisioning)
+      // Lấy chính sách khởi động lại từ DB
       const projectData = await this.prisma.project.findUnique({ where: { id: projectId }, select: { restartPolicy: true } });
       const restartPolicyName = projectData?.restartPolicy ?? 'on-failure';
 
@@ -174,7 +174,7 @@ export class ProjectsService {
       await this.dockerService.startContainer(container.id);
       await this.logActivity(projectId, 'START', 'Container started successfully');
 
-      // Update database status to 'running'
+      // Cập nhật trạng thái database thành 'running'
       await this.prisma.project.update({
         where: { id: projectId },
         data: {
@@ -185,7 +185,7 @@ export class ProjectsService {
 
       this.logger.log(`Background provisioning complete for project ${projectId}. Container ${container.id.substring(0, 12)} is running.`);
 
-      // Generate Nginx reverse-proxy config
+      // Tạo file cấu hình Nginx reverse-proxy
       this.nginxService.generateProxyConfig(
         subdomain,
         hostPort,
@@ -337,7 +337,7 @@ export class ProjectsService {
     const newName = `${original.name}-clone-${Date.now().toString().slice(-4)}`;
     const newSubdomain = `${newName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Math.random().toString(36).substring(2, 7)}`;
 
-    // 1. Create the new project record
+    // 1. Tạo bản ghi dự án mới
     const hostPort = await this.allocatePort();
     const clonedProject = await this.prisma.project.create({
       data: {
@@ -353,7 +353,7 @@ export class ProjectsService {
       },
     });
 
-    // 2. Clone environment variables
+    // 2. Nhân bản các biến môi trường
     if (original.envVariables.length > 0) {
       await this.prisma.envVariable.createMany({
         data: original.envVariables.map(ev => ({
@@ -367,7 +367,7 @@ export class ProjectsService {
 
     await this.logActivity(clonedProject.id, 'CLONE', `Project cloned from "${original.name}" (ID: ${projectId})`);
 
-    // 3. Trigger provisioning in background
+    // 3. Kích hoạt tiến trình cấp phát ngầm
     this.provisionProjectBackground(clonedProject.id, newName, newSubdomain, hostPort).catch(err => {
       this.logger.error(`Background provisioning failed for cloned project ${clonedProject.id}: ${err.message}`);
     });
@@ -380,7 +380,7 @@ export class ProjectsService {
   async updateDomain(id: number, customDomain: string | null) {
     const project = await this.findProjectOrFail(id);
 
-    // If domain is provided, check if it's already in use
+    // Nếu có nhập domain, kiểm tra xem đã được dùng chưa
     if (customDomain) {
       const existing = await this.prisma.project.findUnique({
         where: { customDomain },
@@ -395,7 +395,7 @@ export class ProjectsService {
       data: { customDomain },
     });
 
-    // Update Nginx configuration to reflect new domain
+    // Cập nhật cấu hình Nginx với domain mới
     this.nginxService.generateProxyConfig(
       project.subdomain,
       project.hostPort ?? 10000, // Sử dụng port thực tế của dự án từ database
@@ -412,7 +412,7 @@ export class ProjectsService {
   async enableHttps(id: number) {
     const project = await this.findProjectOrFail(id);
 
-    // We can only issue SSL for valid domains (including subdomains)
+    // Chỉ cấp SSL cho các domain hợp lệ
     const domain = project.customDomain || `${project.subdomain}.potato.local`;
 
     await this.prisma.project.update({
@@ -431,7 +431,7 @@ export class ProjectsService {
         },
       });
 
-      // Update Nginx with SSL active
+      // Cập nhật Nginx bật SSL
       this.nginxService.generateProxyConfig(
         project.subdomain,
         project.hostPort ?? 10000, // Sử dụng port thực tế của dự án từ database
@@ -458,7 +458,7 @@ export class ProjectsService {
   async deleteProject(projectId: number) {
     const project = await this.findProjectOrFail(projectId);
 
-    // 1. Clean up associated databases (Sprouts)
+    // 1. Dọn dẹp các database liên quan
     const dbs = await this.prisma.databaseInstance.findMany({
       where: { projectId },
     });
@@ -472,7 +472,7 @@ export class ProjectsService {
       }
     }
 
-    // 2. Remove Docker container if it exists
+    // 2. Xóa Docker container nếu nó đang tồn tại
     if (project.containerId) {
       try {
         await this.dockerService.removeContainer(project.containerId);
@@ -483,7 +483,7 @@ export class ProjectsService {
       }
     }
 
-    // 2.5 Remove Docker image if it exists
+    // 2.5 Xóa Docker image nếu nó tồn tại
     try {
       const imageName = `potato-app-${projectId}:latest`;
       await this.dockerService.removeImage(imageName);
@@ -491,7 +491,7 @@ export class ProjectsService {
       this.logger.warn(`Failed to clean up image for project ${projectId}: ${error}`);
     }
 
-    // 2.6 Remove host volume directory
+    // 2.6 Xóa thư mục lưu trữ trên host
     try {
       const hostVolumeDir = path.resolve(path.join(process.cwd(), 'uploads', 'volumes', `project-${projectId}`));
       if (fs.existsSync(hostVolumeDir)) {
@@ -502,7 +502,7 @@ export class ProjectsService {
       this.logger.warn(`Failed to clean up host volume directory for project ${projectId}: ${error}`);
     }
 
-    // Clean up attached databases and their containers to avoid FK constraint error
+    // Dọn dẹp database đính kèm để tránh lỗi khóa ngoại (FK)
     const attachedDbs = await this.prisma.databaseInstance.findMany({
       where: { projectId: projectId }
     });
@@ -523,7 +523,7 @@ export class ProjectsService {
       }
     }
 
-    // Remove Nginx proxy config
+    // Xóa file cấu hình Nginx proxy
     this.nginxService.removeProxyConfig(project.subdomain);
 
     await this.prisma.project.delete({ where: { id: projectId } });
@@ -788,7 +788,7 @@ export class ProjectsService {
       });
     }
 
-    // Trigger restart to apply new env vars
+    // Khởi động lại dự án để áp dụng biến môi trường mới
     if (project.containerId) {
       this.logger.log(`Restarting project ${projectId} to apply environment changes...`);
       this.restartProject(projectId).catch(err => {
@@ -833,7 +833,7 @@ export class ProjectsService {
     const project = await this.findProjectOrFail(projectId);
     const result = await this.prisma.envVariable.delete({ where: { id: envId } });
 
-    // Trigger restart to apply changes
+    // Khởi động lại dự án để áp dụng thay đổi
     if (project.containerId) {
       this.restartProject(projectId).catch(err => {
         this.logger.error(`Failed to restart project for env deletion: ${err.message}`);
@@ -883,7 +883,7 @@ export class ProjectsService {
         },
       });
 
-      // Update Nginx config to use SSL
+      // Cập nhật cấu hình Nginx để dùng SSL
       this.nginxService.generateProxyConfig(
         project.subdomain,
         project.hostPort || 10000,
@@ -908,7 +908,7 @@ export class ProjectsService {
       data: { customDomain },
     });
 
-    // Regenerate Nginx config with the new domain
+    // Tạo lại cấu hình Nginx với domain mới
     this.nginxService.generateProxyConfig(
       project.subdomain,
       project.hostPort || 10000,
@@ -923,21 +923,27 @@ export class ProjectsService {
 
   // ─── Git Deploy ──────────────────────────────────────────────────────
 
+  /**
+   * Hàm chính để kích hoạt tiến trình lấy code từ Git.
+   * Bước 1: Lưu thông tin Git (Repo, Token, Branch) vào Database.
+   * Bước 2: Tạo một bản ghi log trạng thái "đang chạy" (deploying).
+   * Bước 3: Đẩy công việc nặng (clone code, build docker) vào background (hàm runGitDeployBackground) để API phản hồi ngay lập tức cho Frontend.
+   */
   async deployFromGit(projectId: number, gitRepo: string, branch: string = 'main', gitToken?: string) {
     const project = await this.findProjectOrFail(projectId);
 
-    // Save git settings to project
+    // Lưu cài đặt Git vào dự án
     await this.prisma.project.update({
       where: { id: projectId },
       data: { gitRepo, deployBranch: branch, gitToken, deployStatus: 'deploying' },
     });
 
-    // Create deployment log entry
+    // Tạo bản ghi lịch sử Deploy (Triển khai)
     const deployment = await this.prisma.deploymentLog.create({
       data: { projectId, status: 'running', trigger: 'manual' },
     });
 
-    // Launch background deploy task
+    // Khởi chạy tiến trình Deploy ngầm
     this.runGitDeployBackground(project, deployment.id, gitRepo, branch).catch(err => {
       this.logger.error(`Git deploy failed for project ${projectId}: ${err.message}`);
     });
@@ -947,6 +953,16 @@ export class ProjectsService {
     return { deploymentId: deployment.id, status: 'deploying', message: 'Deployment started in background' };
   }
 
+  /**
+   * Hàm chạy ngầm (Background Task) để Build Code thực tế.
+   * Chức năng: 
+   * 1. Check RAM hệ thống xem có bị đầy không.
+   * 2. Dùng `simple-git` kéo (clone) code mới nhất về một thư mục tạm trên ổ cứng.
+   * 3. Tự động tìm cổng (Port) trống và tạo file .env.
+   * 4. Gọi Docker Build để đóng gói code thành Image.
+   * 5. Dừng (Stop) Docker container cũ, chạy (Run) Image mới lên.
+   * 6. Dọn dẹp rác (Xóa thư mục tạm và Image cũ).
+   */
   private async runGitDeployBackground(
     project: any,
     deploymentId: number,
@@ -954,13 +970,15 @@ export class ProjectsService {
     branch: string,
   ) {
     const startTime = Date.now();
+    // ĐÂY LÀ ĐOẠN CODE TẠO THƯ MỤC LƯU MÃ NGUỒN TẠM THỜI
+    // os.tmpdir() sẽ tự động trỏ về thư mục Temp của hệ điều hành (ví dụ: C:\Users\...\AppData\Local\Temp hoặc /tmp)
     const tmpDir = path.join(os.tmpdir(), `potato-deploy-${project.id}-${Date.now()}`);
     let logBuffer = '';
 
     const updateLog = async (msg: string) => {
       this.logger.log(`[Deploy ${deploymentId}] ${msg}`);
       logBuffer += `${new Date().toISOString()} ${msg}\n`;
-      // Update DB periodically to show progress
+      // Cập nhật DB định kỳ để hiển thị tiến trình
       await this.prisma.deploymentLog.update({
         where: { id: deploymentId },
         data: { log: logBuffer },
@@ -969,6 +987,9 @@ export class ProjectsService {
 
     try {
       // ── Host Resource Check (Chống Overcommit) ──
+      // Giải thích: Đoạn code này để BẢO VỆ MÁY CHỦ. Trước khi cho phép 1 web mới chạy, 
+      // nó gọi hàm os.freemem() để đo lường xem RAM vật lý của server còn đủ không.
+      // Nếu RAM còn lại thấp hơn mức hệ điều hành cần (5%), nó sẽ đá văng yêu cầu Deploy ngay lập tức!
       const freeRamBytes = os.freemem();
       const totalRamBytes = os.totalmem();
       const requiredRamBytes = project.ramLimit * 1024 * 1024;
@@ -1077,6 +1098,8 @@ export class ProjectsService {
       }
 
       // ── Language Detection & Dockerfile Generation ──
+      // Quét thư mục gốc của source code, nếu thấy composer.json thì tự động hiểu là PHP Laravel.
+      // Nếu thấy package.json thì hiểu là Node.js. Sau đó tự động sinh ra Dockerfile chuẩn tương ứng.
       await updateLog('Đang nhận diện ngôn ngữ dự án...');
       const hasDockerfile = fs.existsSync(path.join(tmpDir, 'Dockerfile'));
       
@@ -1086,7 +1109,17 @@ export class ProjectsService {
           detectedLang = 'php-laravel';
           await updateLog('Phát hiện PHP/Laravel (composer.json). Đang tạo cấu hình Docker...');
           
-          // Ensure Laravel storage directories exist in source before building/copying
+          // Tự động kiểm tra và sinh APP_KEY nếu dự án chưa có
+          const hasAppKey = await this.prisma.envVariable.findFirst({ where: { projectId: project.id, key: 'APP_KEY' }});
+          if (!hasAppKey) {
+            const crypto = require('crypto');
+            await this.prisma.envVariable.create({
+              data: { projectId: project.id, key: 'APP_KEY', value: 'base64:' + crypto.randomBytes(32).toString('base64'), isSecret: false }
+            });
+            await updateLog('Bảo mật: Đã tự động tạo và bơm APP_KEY cho dự án Laravel!');
+          }
+          
+          // Đảm bảo thư mục storage của Laravel tồn tại
           fs.mkdirSync(path.join(tmpDir, 'storage', 'framework', 'views'), { recursive: true });
           fs.mkdirSync(path.join(tmpDir, 'storage', 'framework', 'cache', 'data'), { recursive: true });
           fs.mkdirSync(path.join(tmpDir, 'storage', 'framework', 'sessions'), { recursive: true });
@@ -1207,7 +1240,7 @@ EXPOSE 80
         await updateLog('Phát hiện Dockerfile do người dùng tự cung cấp.');
       }
 
-      // Build Image
+      // Bắt đầu Build Image
       await updateLog(`Đang Build Image (Loại: ${detectedLang}). Việc này có thể mất vài phút...`);
       await this.dockerService.buildImage(tmpDir, imageName, (msg) => {
         if (msg.startsWith('Step') || msg.toLowerCase().includes('error')) {
@@ -1215,7 +1248,7 @@ EXPOSE 80
         }
       });
       await updateLog('Build Image thành công!');
-      // Tag as latest as well
+      // Đánh tag phiên bản là latest
       await this.dockerService.tagImage(imageName, `potato-app-${project.id}`, 'latest');
 
       const hasOldContainer = !!project.containerId;
@@ -1257,12 +1290,12 @@ EXPOSE 80
         portBindings['8000/tcp'] = [{ HostPort: String(newHostPort) }];
       }
 
-      // Setup Persistent Volume
+      // Thiết lập ổ cứng lưu trữ (Persistent Volume)
       const hostVolumeDir = path.resolve(path.join(process.cwd(), 'uploads', 'volumes', `project-${project.id}`));
       fs.mkdirSync(hostVolumeDir, { recursive: true });
       const containerVolumePath = project.volumeMapping || '/app/storage';
 
-      // Copy initial files to host volume directory if they exist in source and host volume is empty/doesn't have files
+      // Copy các file ban đầu vào ổ cứng host nếu thư mục đang trống
       const relPath = containerVolumePath.startsWith('/app/') 
         ? containerVolumePath.substring(5) 
         : containerVolumePath.startsWith('/app')
@@ -1295,12 +1328,17 @@ EXPOSE 80
         Env: envArray,
         ExposedPorts: { [`${targetPort}/tcp`]: {} },
         HostConfig: {
+          // ĐÂY LÀ ĐOẠN CODE SET GIỚI HẠN CỨNG TÀI NGUYÊN (HARD LIMIT) CHO TỪNG WEB
+          // Truyền thông số Memory và CPU thẳng vào lõi Docker Engine. 
+          // Nhờ cái này, mỗi web chạy trong "chuồng" riêng, dù bị lỗi tràn RAM thì Docker sẽ tự động 
+          // "bóp cổ" cái web đó lại, tuyệt đối không làm ảnh hưởng (lag, sập) các web khác trên cùng server.
           Memory: project.ramLimit * 1024 * 1024,
           MemorySwap: project.ramLimit * 1024 * 1024,
           NanoCPUs: Math.floor(project.cpuLimit * 1000000000),
           PortBindings: portBindings,
           Binds: [`${hostVolumeDir}:${containerVolumePath}`],
           RestartPolicy: { Name: 'unless-stopped' },
+          ExtraHosts: ['host.docker.internal:host-gateway'],
         } as any,
       });
 
@@ -1360,13 +1398,13 @@ EXPOSE 80
           this.logger.warn(`Could not remove old container ${project.containerId}: ${e.message}`);
         }
 
-        // Clean up old deployment images for this project to prevent disk bloating
+        // Xóa bớt các image deploy cũ của dự án này để tránh đầy ổ cứng
         try {
           const images = await this.dockerService.listImages();
           for (const img of images) {
             if (img.RepoTags) {
               for (const tag of img.RepoTags) {
-                // Find previous dep-X images for this project, except the current one we just built
+                // Tìm các image cũ của dự án, ngoại trừ bản vừa build xong
                 if (tag.startsWith(`potato-app-${project.id}:dep-`) && !tag.endsWith(`:dep-${deploymentId}`)) {
                   await this.dockerService.removeImage(tag);
                   this.logger.log(`Cleaned up old build image: ${tag}`);
@@ -1374,7 +1412,7 @@ EXPOSE 80
               }
             }
           }
-          // Also prune dangling build layers (dangling: true)
+          // Xóa các layer build thừa (dangling layers)
           await this.dockerService.pruneImages();
         } catch (imgCleanupErr: any) {
           this.logger.warn(`Failed to clean up old build images for project ${project.id}: ${imgCleanupErr.message}`);
@@ -1415,7 +1453,7 @@ EXPOSE 80
 
       await updateLog(`Thu hoạch thành công sau ${duration}s! 🥔🚀`);
 
-      // Trigger Slack success alert if enabled
+      // Gửi thông báo thành công qua Slack nếu có bật
       const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
       if (projectData?.slackWebhook) {
         this.sendSlackAlert(
@@ -1440,7 +1478,7 @@ EXPOSE 80
         data: { deployStatus: 'failed' },
       });
 
-      // Send Slack fail alert
+      // Gửi thông báo lỗi qua Slack
       const projectData = await this.prisma.project.findUnique({ where: { id: project.id } });
       if (projectData?.slackWebhook) {
         this.sendSlackAlert(
@@ -1451,7 +1489,9 @@ EXPOSE 80
         );
       }
     } finally {
-      // Cleanup tmp directory
+      // Dọn dẹp thư mục tạm (tmp)
+      // ĐÂY LÀ ĐOẠN CODE XÓA THƯ MỤC TẠM SAU KHI ĐÃ ĐÓNG GÓI THÀNH DOCKER IMAGE
+      // Nhờ dòng code dọn rác này, ổ cứng máy chủ sẽ không bao giờ bị đầy rác (source code thừa)
       try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { }
     }
   }
@@ -1571,9 +1611,9 @@ EXPOSE 80
 
     const project = await this.findProjectOrFail(projectId);
 
-    // If container is running, we need to update via docker update + recreate
-    // Docker doesn't support updating RestartPolicy on a live container directly,
-    // so we record the intent in DB and it applies on next container recreate.
+    // Nếu container đang chạy, cần cập nhật qua docker update + recreate
+    // Docker không hỗ trợ cập nhật RestartPolicy trực tiếp trên container đang chạy,
+    // nên ta lưu vào DB để áp dụng vào lần tạo lại (recreate) tiếp theo.
     const updated = await this.prisma.project.update({
       where: { id: projectId },
       data: { restartPolicy: policy },
@@ -1591,7 +1631,7 @@ EXPOSE 80
   async getProjectLogs(projectId: number): Promise<string> {
     const project = await this.findProjectOrFail(projectId);
 
-    // 1. Try to get live Docker logs if container exists
+    // 1. Cố gắng lấy log trực tiếp từ Docker nếu container tồn tại
     if (project.containerId) {
       try {
         const logs = await this.dockerService.getContainerLogs(project.containerId);
@@ -1603,7 +1643,7 @@ EXPOSE 80
       }
     }
 
-    // 2. Fallback: Get the latest deployment log
+    // 2. Dự phòng: Lấy log của lần deploy gần nhất
     const lastDeploy = await this.prisma.deploymentLog.findFirst({
       where: { projectId },
       orderBy: { createdAt: 'desc' },
@@ -1657,11 +1697,16 @@ EXPOSE 80
     return { ok: true, message: 'Đã gửi tin nhắn thử nghiệm về Slack thành công!' };
   }
 
+  // [HỆ THỐNG CẢNH BÁO SLACK]
+  // Hàm này chịu trách nhiệm gửi tin nhắn thẳng vào nhóm chat (Channel) của công ty trên Slack.
+  // Nhận vào 3 trạng thái màu sắc: Xanh (success), Vàng (warning), Đỏ (failed).
   public async sendSlackAlert(webhookUrl: string, projectName: string, status: 'success' | 'failed' | 'warning', detailMessage: string) {
     if (!webhookUrl) return;
     try {
       const http = require('https');
       
+      // BƯỚC 1: KHỞI TẠO PAYLOAD VÀ PHÂN LOẠI MÀU SẮC
+      // Tự động gán mã màu HEX tùy theo mức độ nghiêm trọng: Xanh (Thành công), Vàng (Cảnh báo), Đỏ (Lỗi sập).
       const payload = {
         text: status === 'success' 
           ? `🚀 *Thông báo từ Potato: ${projectName}*` 
@@ -1678,10 +1723,14 @@ EXPOSE 80
         ]
       };
 
+      // BƯỚC 2: CHUYỂN ĐỔI DỮ LIỆU (SERIALIZATION)
+      // Ép Object thành Chuỗi JSON, rồi chuyển thành chuỗi nhị phân Buffer mã hóa UTF-8 để không bị lỗi font tiếng Việt khi gửi qua mạng.
       const dataStr = JSON.stringify(payload);
       const dataBuffer = Buffer.from(dataStr, 'utf8');
       const url = new URL(webhookUrl);
       
+      // BƯỚC 3: THIẾT LẬP HEADER HTTP PURE (KHÔNG DÙNG THƯ VIỆN NGOÀI)
+      // Bắt buộc phải cấu hình đúng Content-Length để máy chủ Slack không từ chối kết nối (chống DDoS).
       const options = {
         hostname: url.hostname,
         path: url.pathname + url.search,
@@ -1692,25 +1741,35 @@ EXPOSE 80
         }
       };
 
+      // BƯỚC 4: BẮN DỮ LIỆU VÀ BẮT LỖI AN TOÀN (GRACEFUL ERROR HANDLING)
       const req = http.request(options, (res: any) => {
         let body = '';
         res.on('data', (chunk: any) => body += chunk);
         res.on('end', () => {
           if (res.statusCode !== 200) {
-            this.logger.warn(`Slack webhook returned ${res.statusCode}: ${body}`);
+            this.logger.warn(`Slack Webhook trả về lỗi ${res.statusCode}: ${body}`);
           }
         });
       });
+      // Bắt lỗi Network (Ví dụ: rớt mạng) mà KHÔNG làm sập tiến trình Node.js
       req.on('error', (e: any) => {
-        this.logger.warn(`Failed to send Slack alert: ${e.message}`);
+        this.logger.warn(`Gửi cảnh báo Slack thất bại: ${e.message}`);
       });
-      req.write(dataBuffer);
-      req.end();
+      req.write(dataBuffer); // Bóp cò bắn dữ liệu đi
+      req.end();             // Ngắt kết nối
     } catch (err: any) {
-      this.logger.warn(`Error sending Slack alert: ${err.message}`);
+      this.logger.warn(`Lỗi khi gửi cảnh báo Slack: ${err.message}`);
     }
   }
 
+  /**
+   * Hàm khôi phục dự án về phiên bản cũ (Rollback).
+   * Cơ chế hoạt động :
+   * 1. Tìm thông tin bản build cũ (Deployment) trong Database.
+   * 2. Kiểm tra xem file Docker Image cũ còn lưu trên ổ cứng của server hay không.
+   * 3. Nếu Image CÒN: Kích hoạt quy trình khôi phục siêu tốc (Rapid Rollback) - chỉ tốn 1-2 giây vì không cần build lại code.
+   * 4. Nếu Image ĐÃ MẤT (do server dọn rác): Tự động gọi lại quy trình Deploy, nhưng ép hệ thống clone đúng cái mã băm (Commit Hash) của bản cũ để build lại.
+   */
   async rollbackProject(projectId: number, deploymentId: number) {
     const project = await this.findProjectOrFail(projectId);
     const deployment = await this.prisma.deploymentLog.findFirst({
@@ -1724,18 +1783,23 @@ EXPOSE 80
 
     let imageExists = true;
     try {
+      // Gửi lệnh xuống Docker Engine để kiểm tra xem Image cũ còn tồn tại trên ổ cứng không
       await this.dockerService.inspectImage(rollbackImageName);
     } catch (err) {
-      imageExists = false;
+      imageExists = false; // Docker báo lỗi -> Image không tồn tại
     }
 
     if (!imageExists) {
+      // Trường hợp 1: Image đã mất. Bắt buộc phải Build lại từ đầu.
       if (!project.gitRepo) {
         throw new BadRequestException('Không thể rollback vì không tìm thấy ảnh Docker cũ và không có mã nguồn Git để build lại.');
       }
+      // Gọi lại hàm deployFromGit nhưng truyền vào 'deployment.gitCommit' thay vì tên nhánh (branch)
+      // Điều này đảm bảo code lấy về chính xác là code của ngày hôm đó, chứ không phải code mới nhất trên Git.
       return this.deployFromGit(projectId, project.gitRepo, deployment.gitCommit || project.deployBranch || 'main', project.gitToken || undefined);
     }
 
+    // Trường hợp 2: Image vẫn còn. Tiến hành "Rapid Rollback" (Rollback siêu tốc)
     this.logger.log(`Performing rapid rollback for project ${projectId} to deployment ${deploymentId}`);
 
     const newDeployment = await this.prisma.deploymentLog.create({

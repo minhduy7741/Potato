@@ -7,8 +7,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export class RolesController {
   constructor(private prisma: PrismaService) {}
 
+  // ĐÂY LÀ HÀM KIỂM TRA QUYỀN LỰC (PERMISSION CHECKER)
+  // Hàm này chặn đứng bất kỳ ai cố tình truy cập vào trang Phân quyền nếu không đủ thẩm quyền.
   private async checkPermission(req: any) {
-    // Super Admin luôn được phép
+    // 1. Super Admin luôn được phép
     if (req.user?.role === 'ADMIN' && req.user?.email === 'superadmin@potato.com') return;
 
     const dbUser = await this.prisma.user.findUnique({
@@ -16,11 +18,11 @@ export class RolesController {
       include: { customRole: true },
     });
 
-    // Tenant Admin: parentId = null và không phải superadmin → là chủ doanh nghiệp, được phép toàn quyền
+    // 2. Tenant Admin: parentId = null và không phải superadmin → là chủ doanh nghiệp, được phép toàn quyền quản lý Role của công ty mình.
     const isTenantAdmin = dbUser?.parentId === null && req.user?.email !== 'superadmin@potato.com';
     if (isTenantAdmin) return;
 
-    // Sub-user có quyền system:role:manage cũng được phép
+    // 3. Sub-user (Nhân viên cấp dưới) nhưng được giám đốc cấp riêng cái quyền 'system:role:manage' cũng được phép vào đây.
     const isManager = dbUser?.customRole?.permissions?.includes('system:role:manage');
     if (isManager) return;
 
@@ -29,7 +31,8 @@ export class RolesController {
 
   /**
    * GET /api/roles
-   * Trả về danh sách vai trò tùy biến.
+   * Lấy danh sách các Role (Vai trò) để hiển thị lên bảng Permissions.
+   * [CÔ LẬP DỮ LIỆU]: Chủ công ty nào thì chỉ nhìn thấy Role do công ty đó tạo ra.
    */
   @Get()
   async getRoles(@Request() req: any) {
@@ -43,7 +46,7 @@ export class RolesController {
       where: { id: req.user.id }
     });
 
-    // Chuẩn hóa về Admin gốc của tenant (không dùng parentId của sub-manager)
+    // [CÔ LẬP DỮ LIỆU]: Chuẩn hóa ID về Giám đốc gốc của công ty (Công ty nào chỉ thấy Role của công ty đó)
     const tenantAdminId = dbUser?.parentId ?? dbUser?.id;
 
     // Chỉ trả về role của tenant này, KHÔNG trả về role của tenant khác hay system role (ownerId=null)
@@ -72,7 +75,7 @@ export class RolesController {
 
     const isSystemAdmin = req.user?.role === 'ADMIN' && req.user?.email === 'superadmin@potato.com';
 
-    // Luôn gán ownerId về Admin gốc của tenant (kể cả khi sub-manager tạo role)
+    // [BẢO MẬT]: Bắt buộc gán ownerId về Giám đốc gốc (Để đảm bảo nhân viên tạo Role thì Role đó vẫn thuộc về công ty)
     let ownerId: number | null = null;
     if (!isSystemAdmin) {
       const dbUser = await this.prisma.user.findUnique({ where: { id: req.user.id } });

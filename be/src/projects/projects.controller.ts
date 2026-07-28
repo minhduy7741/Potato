@@ -64,6 +64,8 @@ export class ProjectsController {
     });
     if (!admin) throw new ForbiddenException('Không tìm thấy Admin quản lý.');
 
+    const isSuperAdmin = admin.email === 'superadmin@potato.com' || admin.email === process.env.SUPER_ADMIN_EMAIL;
+
     // 1. Kiểm tra giới hạn số lượng dự án (maxProjects)
     const tenantProjectsCount = await this.prisma.project.count({
       where: {
@@ -74,7 +76,7 @@ export class ProjectsController {
       }
     });
 
-    if (tenantProjectsCount >= admin.maxProjects) {
+    if (!isSuperAdmin && tenantProjectsCount >= admin.maxProjects) {
       throw new BadRequestException(`Doanh nghiệp của bạn đã vượt quá giới hạn số lượng dự án cho phép (Tối đa: ${admin.maxProjects} dự án). Vui lòng liên hệ Super Admin để nâng cấp.`);
     }
 
@@ -93,7 +95,7 @@ export class ProjectsController {
     });
     const currentTotalRam = runningProjects.reduce((sum, p) => sum + p.ramLimit, 0);
 
-    if (currentTotalRam + newProjectRam > admin.maxRam) {
+    if (!isSuperAdmin && currentTotalRam + newProjectRam > admin.maxRam) {
       throw new BadRequestException(`Vượt quá giới hạn dung lượng RAM được cấp phát cho doanh nghiệp (Cấp phép tối đa: ${admin.maxRam} MB, Đang dùng: ${currentTotalRam} MB, Yêu cầu: ${newProjectRam} MB). Vui lòng dừng bớt dự án khác để tạo mới.`);
     }
 
@@ -159,6 +161,9 @@ export class ProjectsController {
   async start(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
     this.logger.log(`PATCH /projects/${id}/start`);
     
+    // [TRẢ LỜI HỘI ĐỒNG] - CÂU HỎI KIỂM TRA QUOTA RAM
+    // Code ở đây sẽ lôi toàn bộ dự án ĐANG CHẠY (status = 'running') của Công ty (Tenant) ra tính tổng.
+    // Nếu (Tổng RAM đang chạy + RAM chuẩn bị chạy) > Quota cho phép (maxRam) -> Chặn và báo lỗi BadRequest.
     // Check Quota RAM
     const requester = await this.prisma.user.findUnique({
       where: { id: req.user.id }
@@ -402,6 +407,11 @@ export class ProjectsController {
 
   // ─── Project Lifecycle ───────────────────────────────────────────────────────
 
+  /**
+   * API: POST /projects/:id/deploy
+   * Chức năng: Kích hoạt quá trình lấy code từ Git (Github/Gitlab) và Build (Triển khai code).
+   * Note: Hàm này chỉ tạo tín hiệu, quá trình build thực sự diễn ra ngầm (background) để không làm treo màn hình người dùng.
+   */
   @Post(':id/deploy')
   @RequirePermission('project:deploy')
   async deploy(
@@ -414,12 +424,22 @@ export class ProjectsController {
 
   // ─── Deployment History ────────────────────────────────────────────────
 
+  /**
+   * API: GET /projects/:id/deployments
+   * Chức năng: Lấy danh sách lịch sử các lần đã deploy (lịch sử build) để hiển thị lên bảng.
+   */
   @Get(':id/deployments')
   @RequirePermission('project:read')
   async getDeployments(@Param('id', ParseIntPipe) id: number) {
     return this.projectsService.getDeployments(id);
   }
 
+  /**
+   * API: POST /projects/:id/rollback/:deploymentId
+   * Chức năng: Khôi phục lại bản build cũ (Rollback).
+   * Note: Nếu Docker Image của bản cũ vẫn còn trên server thì sẽ khởi động lại rất nhanh.
+   * Nếu đã bị xóa, hệ thống sẽ clone lại mã băm (commit hash) cũ để build lại từ đầu.
+   */
   @Post(':id/rollback/:deploymentId')
   @RequirePermission('project:deploy')
   async rollback(

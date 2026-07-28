@@ -32,6 +32,11 @@ export class AppController {
   @UseGuards(JwtAuthGuard, ProjectPermissionGuard)
   @RequirePermission('system:infrastructure:read')
   async getSystemStats(@Request() req: any) {
+    // [KỸ THUẬT ROOT USER]
+    // Đây là cốt lõi của việc phân biệt Super Admin và Tenant Admin (Chủ doanh nghiệp thuê bao).
+    // Hệ thống không cần tạo thêm Role 'SUPER_ADMIN' trong Database để tối ưu.
+    // Thay vào đó, bất cứ ai có role là ADMIN + email là 'superadmin@potato.com' 
+    // sẽ được Hardcode phong làm Root User (Tối cao).
     const isSuperAdmin = req.user.role === 'ADMIN' && req.user.email === 'superadmin@potato.com';
     if (!isSuperAdmin) {
       throw new ForbiddenException('Quyền truy cập bị từ chối. Chỉ Super Admin mới được xem giám sát hệ thống.');
@@ -179,6 +184,9 @@ export class AppController {
   @RequirePermission('system:user:manage')
   async getUsers(@Request() req: any) {
     const isSystemAdmin = req.user.role === 'ADMIN' && req.user.email === 'superadmin@potato.com';
+    // [CÔ LẬP DỮ LIỆU - TENANT ISOLATION]
+    // Nếu là Super Admin tối cao -> Được lấy TOÀN BỘ tài khoản (where = {})
+    // Nếu chỉ là Chủ doanh nghiệp (Tenant Admin) -> Chỉ được lấy các nhân viên cấp dưới thuộc công ty mình (parentId = req.user.id)
     const whereCondition = isSystemAdmin ? {} : { parentId: req.user.id };
 
     return this.prisma.user.findMany({
@@ -235,6 +243,10 @@ export class AppController {
       throw new ForbiddenException('Không tìm thấy tài khoản người yêu cầu.');
     }
 
+    // [PHÂN LOẠI 3 CẤP ĐỘ QUẢN TRỊ]
+    // 1. Super Admin: Quản lý tối cao của cả hệ thống Potato PaaS.
+    // 2. Tenant Admin: Giám đốc/Chủ của 1 công ty thuê bao (Chỉ được quản lý nhân viên của công ty mình).
+    // 3. Sub-Manager: Trưởng phòng (Là DEVELOPER nhưng được gán quyền Manager, có thể gán quyền cho nhân viên khác).
     const isSuperAdmin = requester.role === 'ADMIN' && requester.email === 'superadmin@potato.com';
     const isTenantAdmin = requester.role === 'ADMIN' && requester.email !== 'superadmin@potato.com';
     const isSubManager = !isSuperAdmin && !isTenantAdmin;
@@ -383,6 +395,8 @@ export class AppController {
     }
 
     // Tenant isolation:
+    // [CÔ LẬP XÓA TÀI KHOẢN]
+    // Chặn đứng việc Công ty A táy máy xóa nhân viên của Công ty B.
     const isSystemAdmin = requester.role === 'ADMIN' && requester.email === 'superadmin@potato.com';
     if (!isSystemAdmin && userToDelete.parentId !== requester.id) {
       throw new ForbiddenException('Bạn không có quyền xóa tài khoản của doanh nghiệp khác.');

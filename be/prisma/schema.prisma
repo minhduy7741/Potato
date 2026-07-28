@@ -1,4 +1,4 @@
-// This is your Prisma schema file
+// Đây là file cấu hình Prisma schema của bạn
 
 generator client {
   provider = "prisma-client-js"
@@ -24,9 +24,9 @@ enum ProjectRole {
 model CustomRole {
   id                  Int      @id @default(autoincrement())
   name                String   @unique
-  permissions         String[] // e.g. ["project:read", "logs:read"]
+  permissions         String[] // VD: ["project:read", "logs:read"]
   assignableByManager Boolean  @default(false)
-  ownerId             Int?     // Admin owner who created this role
+  ownerId             Int?     // Chủ sở hữu Admin đã tạo role này
   owner               User?    @relation("AdminCustomRoles", fields: [ownerId], references: [id])
   users               User[]
   createdAt           DateTime @default(now())
@@ -38,7 +38,7 @@ model User {
   password          String
   name              String?
   role              Role            @default(DEVELOPER)
-  parentId          Int?            // Parent Admin account (Null if Super Admin or Admin itself)
+  parentId          Int?            // Tài khoản Admin cấp trên (Null nếu là Super Admin hoặc tự là Admin)
   parent            User?           @relation("UserSubAccounts", fields: [parentId], references: [id])
   children          User[]          @relation("UserSubAccounts")
   customRoleId      Int?
@@ -47,11 +47,11 @@ model User {
   memberships       ProjectMember[]
   projects          Project[]
   
-  // Resource Quotas (Only meaningful for Admin accounts)
-  maxRam            Int             @default(1024)  // RAM limit in MB (default 1GB)
-  maxDisk           Int             @default(5)     // Disk limit in GB (default 5GB)
-  maxProjects       Int             @default(3)     // Max allowed projects
-  maxDatabases      Int             @default(2)     // Max allowed databases
+  // Hạn mức Tài nguyên (Chỉ có ý nghĩa với tài khoản Admin)
+  maxRam            Int             @default(1024)  // Giới hạn RAM tính bằng MB (mặc định 1GB)
+  maxDisk           Int             @default(5)     // Giới hạn ổ cứng tính bằng GB (mặc định 5GB)
+  maxProjects       Int             @default(3)     // Số lượng dự án tối đa cho phép
+  maxDatabases      Int             @default(2)     // Số lượng database tối đa cho phép
   
   createdAt         DateTime        @default(now())
 }
@@ -68,13 +68,13 @@ model Project {
   customDomain   String?            @unique
   sslStatus      String             @default("none")
   sslExpiry      DateTime?
-  // Git Deploy
+  // Triển khai qua Git (Git Deploy)
   gitRepo        String?
   deployBranch   String?            @default("main")
   gitToken       String?
-  deployStatus   String?            @default("idle") // idle, deploying, success, failed
+  deployStatus   String?            @default("idle") // Các trạng thái: idle, deploying, success, failed
   lastDeployedAt DateTime?
-  restartPolicy       String             @default("on-failure") // no, on-failure, always
+  restartPolicy       String             @default("on-failure") // Chính sách khởi động lại: no, on-failure, always
   autoScale           Boolean            @default(false)
   notificationsEnabled Boolean           @default(true)
   volumeMapping       String?            @default("/app/storage")
@@ -98,7 +98,7 @@ model ProjectMember {
   projectId   Int
   project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   role        ProjectRole @default(VIEWER)
-  permissions String[]    // backup permissions
+  permissions String[]    // Các quyền dự phòng
   createdAt   DateTime    @default(now())
 
   @@unique([userId, projectId])
@@ -118,11 +118,11 @@ model DeploymentLog {
   id           Int      @id @default(autoincrement())
   projectId    Int
   project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  trigger      String   @default("manual") // manual, git-push
-  status       String   @default("pending") // pending, running, success, failed
+  trigger      String   @default("manual") // Kích hoạt: manual (thủ công), git-push (tự động)
+  status       String   @default("pending") // Trạng thái: pending, running, success, failed
   gitCommit    String?
   gitMessage   String?
-  duration     Int?     // seconds
+  duration     Int?     // Thời gian chạy (giây)
   log          String?  @db.Text
   createdAt    DateTime @default(now())
 }
@@ -131,7 +131,7 @@ model ActivityLog {
   id        Int      @id @default(autoincrement())
   projectId Int
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  type      String   // START, STOP, RESTART, UPDATE_RESOURCES, CLONE, DEPLOY
+  type      String   // Loại: START, STOP, RESTART, UPDATE_RESOURCES, CLONE, DEPLOY
   message   String
   createdAt DateTime @default(now())
 }
@@ -140,8 +140,8 @@ model ProjectStat {
   id         Int      @id @default(autoincrement())
   projectId  Int
   project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  cpuUsage   Float    // percentage 0-100
-  ramUsage   Float    // MB
+  cpuUsage   Float    // Phần trăm từ 0-100
+  ramUsage   Float    // Tính bằng MB
   createdAt  DateTime @default(now())
 
   @@index([projectId, createdAt])
@@ -164,9 +164,9 @@ model DatabaseActivityLog {
   id         Int              @id @default(autoincrement())
   databaseId Int
   database   DatabaseInstance @relation(fields: [databaseId], references: [id], onDelete: Cascade)
-  action     String           // IMPORT, EXPORT, CHANGE_PASSWORD
+  action     String           // Hành động: IMPORT, EXPORT, CHANGE_PASSWORD
   filename   String?
-  status     String           // SUCCESS, FAILED
+  status     String           // Trạng thái: SUCCESS (thành công), FAILED (thất bại)
   message    String?          @db.Text
   createdAt  DateTime         @default(now())
 }
