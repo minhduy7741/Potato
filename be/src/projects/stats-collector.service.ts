@@ -61,6 +61,8 @@ export class StatsCollectorService {
     const results = await Promise.allSettled(
       runningProjects.map(async (project) => {
         try {
+          // Hàm này sẽ dùng dockerode để đọc file cgroups (Control Groups) của hệ điều hành
+          // qua đó lấy chính xác số RAM, CPU mà Container đó đang ăn ở thời điểm hiện tại.
           const stats = await this.dockerService.getContainerStats(project.containerId!);
           // 2. Lưu số liệu thống kê vào Database
           await this.prisma.projectStat.create({

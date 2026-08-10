@@ -79,8 +79,9 @@ export class DatabasesService {
         });
 
         // Nếu container tồn tại và đang chạy, status là 'running'. Ngược lại là 'stopped'.
+        // Lưu ý: KHÔNG đè trạng thái 'running' nếu connectionString chưa được tạo (còn đang provisioning)
         const actualStatus = containers.length > 0
-          ? (containers[0].State === 'running' ? 'running' : 'stopped')
+          ? (containers[0].State === 'running' && db.connectionString ? 'running' : (db.status === 'provisioning' ? 'provisioning' : 'stopped'))
           : 'stopped';
 
         if (db.status !== actualStatus) {
@@ -238,10 +239,10 @@ export class DatabasesService {
     // 3. Khởi động Container vừa tạo lên
     await this.docker.startContainer(containerName);
 
-    // 4. Chờ 20 giây để Database khởi động xong (vì MySQL/Postgres mất thời gian tạo file hệ thống lần đầu)
+    // 4. Chờ 45 giây để Database khởi động xong (vì MySQL/Postgres mất thời gian tạo file hệ thống lần đầu)
     if (type === 'mysql' || type === 'postgres') {
-      this.logger.log(`Waiting 20s for database ${dbId} to fully initialize...`);
-      await new Promise(resolve => setTimeout(resolve, 20000));
+      this.logger.log(`Waiting 45s for database ${dbId} to fully initialize...`);
+      await new Promise(resolve => setTimeout(resolve, 45000));
     }
 
     // 5. Cập nhật trạng thái Database thành 'running' và LƯU CHUỖI KẾT NỐI (ConnectionString) vào DB
@@ -301,7 +302,7 @@ export class DatabasesService {
           if (existing) {
             await this.prisma.envVariable.update({
               where: { id: existing.id },
-              data: { value: encryptedValue }
+              data: { value: encryptedValue, isSecret }
             });
           } else {
             await this.prisma.envVariable.create({
@@ -517,7 +518,7 @@ throw new InternalServerErrorException('No available ports for database');
       if (envVar) {
         await this.prisma.envVariable.update({
           where: { id: envVar.id },
-          data: { value: encrypt(newPass) }
+          data: { value: encrypt(newPass), isSecret: true }
         });
       }
     }
@@ -805,7 +806,7 @@ return filePath;
 
       result = stdout;
     } else if (db.type === 'mongodb') {
-      const tmpQueryFile = `/tmp/query_${Date.now()}.js`;
+      const tmpQueryFile = `/tmp/quer   now()}.js`;
       const localTmpFile = path.join(os.tmpdir(), `query_${Date.now()}.js`);
       fs.writeFileSync(localTmpFile, query);
 

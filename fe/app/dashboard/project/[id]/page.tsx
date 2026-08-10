@@ -32,6 +32,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params)
   const router = useRouter()
   const [project, setProject] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
@@ -106,6 +107,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     if (id) fetchProject()
+    
+    const userJson = localStorage.getItem("potato_user")
+    if (userJson) {
+      try {
+        setCurrentUser(JSON.parse(userJson))
+      } catch (e) {}
+    }
   }, [id])
 
   if (isLoading || !project) {
@@ -115,6 +123,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       </div>
     )
   }
+
+  // RBAC Checks
+  const isOwner = project?.userId === currentUser?.id;
+  const isGlobalAdmin = currentUser?.role === 'ADMIN';
+  const memberRecord = project?.members?.find((m: any) => m.userId === currentUser?.id);
+  const isProjectAdmin = memberRecord?.role === 'ADMIN';
+  const isProjectEditor = memberRecord?.role === 'EDITOR' || isProjectAdmin;
+  
+  const canEdit = isOwner || isGlobalAdmin || isProjectEditor;
+  const canManage = isOwner || isGlobalAdmin || isProjectAdmin;
 
   const statusColors: any = {
     running: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
@@ -174,12 +192,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           <div className="flex items-center gap-2">
-            {project.status === "running" ? (
+            {canEdit && project.status === "running" && (
               <Button size="sm" variant="outline" className="border-red-500/30 text-red-400 hover:bg-red-500/10" onClick={handleStop}>
                 <XCircle className="mr-2 h-4 w-4" />
                 Dừng
               </Button>
-            ) : (
+            )}
+            
+            {canEdit && project.status !== "running" && (
               <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleStart}>
                 {project.status === "hibernated" ? (
                   <>
@@ -205,27 +225,36 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 Truy cập URL
               </Link>
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="border-border hover:bg-muted h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
-                <DropdownMenuItem onClick={handleRestart}>Khởi động lại</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleClone}>Nhân bản</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-400" onClick={() => setDeleteConfirmOpen(true)}>Xóa dự án</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <ConfirmDialog
-              open={deleteConfirmOpen}
-              title={`Xóa dự án "${project?.name}"?`}
-              description="Hành động này sẽ xóa vĩnh viễn container, logs và toàn bộ dữ liệu liên quan. Không thể hoàn tác."
-              confirmLabel="Xóa dự án"
-              onConfirm={() => { setDeleteConfirmOpen(false); handleDelete() }}
-              onCancel={() => setDeleteConfirmOpen(false)}
-            />
+            
+            {canEdit && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="border-border hover:bg-muted h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
+                  <DropdownMenuItem onClick={handleRestart}>Khởi động lại</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleClone}>Nhân bản</DropdownMenuItem>
+                  {canManage && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-red-400" onClick={() => setDeleteConfirmOpen(true)}>Xóa dự án</DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {canManage && (
+              <ConfirmDialog
+                open={deleteConfirmOpen}
+                title={`Xóa dự án "${project?.name}"?`}
+                description="Hành động này sẽ xóa vĩnh viễn container, logs và toàn bộ dữ liệu liên quan. Không thể hoàn tác."
+                confirmLabel="Xóa dự án"
+                onConfirm={() => { setDeleteConfirmOpen(false); handleDelete() }}
+                onCancel={() => setDeleteConfirmOpen(false)}
+              />
+            )}
           </div>
         </div>
       </motion.div>
@@ -241,36 +270,46 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               Tổng quan
             </TabsTrigger>
-            <TabsTrigger value="deploy" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              <GitBranch className="mr-1.5 h-3.5 w-3.5" />
-              Triển khai Git
-            </TabsTrigger>
-            <TabsTrigger value="env" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              <Key className="mr-1.5 h-3.5 w-3.5" />
-              Biến môi trường
-            </TabsTrigger>
+            {canEdit && (
+              <TabsTrigger value="deploy" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                <GitBranch className="mr-1.5 h-3.5 w-3.5" />
+                Triển khai Git
+              </TabsTrigger>
+            )}
+            {canEdit && (
+              <TabsTrigger value="env" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                <Key className="mr-1.5 h-3.5 w-3.5" />
+                Biến môi trường
+              </TabsTrigger>
+            )}
             <TabsTrigger value="logs" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               Nhật ký Logs
             </TabsTrigger>
             <TabsTrigger value="metrics" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               Thông số Metrics
             </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              Cài đặt
-            </TabsTrigger>
+            {canManage && (
+              <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                Cài đặt
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="overview">
-            <ProjectOverview project={project} />
+            <ProjectOverview project={project} canEdit={canEdit} />
           </TabsContent>
 
-          <TabsContent value="deploy">
-            <GitDeploy project={project} onUpdate={fetchProject} />
-          </TabsContent>
+          {canEdit && (
+            <TabsContent value="deploy">
+              <GitDeploy project={project} onUpdate={fetchProject} />
+            </TabsContent>
+          )}
 
-          <TabsContent value="env">
-            <EnvVariablesManager projectId={project.id} />
-          </TabsContent>
+          {canEdit && (
+            <TabsContent value="env">
+              <EnvVariablesManager projectId={project.id} />
+            </TabsContent>
+          )}
 
           <TabsContent value="logs">
             <div className="flex flex-col gap-6">
@@ -293,13 +332,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </p>
               </div>
               <MetricsCharts projectId={project.id} />
-              <ResourceControl project={project} onUpdate={fetchProject} />
+              {canEdit && <ResourceControl project={project} onUpdate={fetchProject} />}
             </div>
           </TabsContent>
 
-          <TabsContent value="settings">
-            <ProjectSettings project={project} />
-          </TabsContent>
+          {canManage && (
+            <TabsContent value="settings">
+              <ProjectSettings project={project} />
+            </TabsContent>
+          )}
         </Tabs>
       </motion.div>
     </div>

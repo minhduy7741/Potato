@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { exec } from 'child_process';
 
 @Injectable()
 export class NginxService {
@@ -28,8 +29,10 @@ export class NginxService {
     projectName: string,
     customDomain?: string,
     sslActive: boolean = false,
+    targetPort: string = '80'
   ): string {
     const serverName = customDomain 
+
       ? `${subdomain}.potato.local ${customDomain}` 
       : `${subdomain}.potato.local`;
 
@@ -37,6 +40,25 @@ export class NginxService {
 
     const sslCertPath = path.resolve(process.cwd(), 'ssl_certs', customDomain || subdomain, 'fullchain.pem');
     const sslKeyPath = path.resolve(process.cwd(), 'ssl_certs', customDomain || subdomain, 'privkey.pem');
+
+    const isFastCGI = targetPort === '9000';
+    const locationBlock = isFastCGI ? `
+    location / {
+        fastcgi_pass   127.0.0.1:${hostPort};
+        fastcgi_index  index.php;
+        fastcgi_param  SCRIPT_FILENAME /var/www/html/public$fastcgi_script_name;
+        include        fastcgi_params;
+    }` : `
+    location / {
+        proxy_pass         http://127.0.0.1:${hostPort};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }`;
 
     if (sslActive) {
       // Force HTTPS: Redirect port 80 to 443
@@ -60,17 +82,7 @@ server {
 
     access_log /var/log/nginx/${subdomain}.ssl.access.log;
     error_log  /var/log/nginx/${subdomain}.ssl.error.log;
-
-    location / {
-        proxy_pass         http://127.0.0.1:${hostPort};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+${locationBlock}
 }
 `;
     } else {
@@ -82,17 +94,7 @@ server {
 
     access_log /var/log/nginx/${subdomain}.access.log;
     error_log  /var/log/nginx/${subdomain}.error.log;
-
-    location / {
-        proxy_pass         http://127.0.0.1:${hostPort};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+${locationBlock}
 }
 `;
     }
@@ -111,6 +113,8 @@ server {
     this.logger.log(`\n🥔 Nginx status: ${sslActive ? 'SSL/HTTPS (Forced)' : 'HTTP Standard'}\n`);
     this.logger.log(`Nginx config preview:\n${finalConfig}`);
 
+    this.reloadNginx();
+
     return finalConfig;
   }
 
@@ -125,8 +129,22 @@ server {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
       this.logger.log(`🗑️ Deleted Nginx config: ${filePath}`);
+      this.reloadNginx();
     } else {
       this.logger.warn(`⚠️ Nginx config not found for removal: ${filePath}`);
     }
+  }
+
+  /**
+   * Reloads Nginx gracefully
+   */
+  private reloadNginx(): void {
+    exec('nginx -s reload', (error, stdout, stderr) => {
+      if (error) {
+        this.logger.warn(`⚠️ Could not reload Nginx automatically (Are you on Windows/Dev or is Nginx not running?). Error: ${error.message}`);
+        return;
+      }
+      this.logger.log(`✅ Nginx reloaded successfully.`);
+    });
   }
 }

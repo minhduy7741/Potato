@@ -15,7 +15,7 @@ export class AppController {
     private readonly appService: AppService,
     private readonly prisma: PrismaService,
     private readonly projectsService: ProjectsService,
-  ) {}
+  ) { }
 
   @Get()
   @Redirect('http://localhost:3001', 301)
@@ -42,6 +42,7 @@ export class AppController {
       throw new ForbiddenException('Quyền truy cập bị từ chối. Chỉ Super Admin mới được xem giám sát hệ thống.');
     }
     // ── RAM ──────────────────────────────────────────
+    // Dữ liệu tổng được đo trực tiếp từ Kernel của hệ điều hành thông qua module 'os' của NodeJS
     const totalRamBytes = os.totalmem();
     const freeRamBytes = os.freemem();
     const usedRamBytes = totalRamBytes - freeRamBytes;
@@ -58,6 +59,7 @@ export class AppController {
     const cpuLoadPercent = +((loadAvg[0] / cpuCores) * 100).toFixed(1);
 
     // ── DISK ─────────────────────────────────────────
+    // Đo dung lượng ổ cứng chứa thư mục đang chạy code (process.cwd())
     let diskTotal = 0;
     let diskFree = 0;
     try {
@@ -85,8 +87,8 @@ export class AppController {
     const platform = os.platform(); // 'win32', 'linux', 'darwin'
     const platformLabel =
       platform === 'win32' ? 'Windows' :
-      platform === 'linux' ? 'Linux' :
-      platform === 'darwin' ? 'macOS' : platform;
+        platform === 'linux' ? 'Linux' :
+          platform === 'darwin' ? 'macOS' : platform;
 
     // ── DATABASE STATS ───────────────────────────────
     const [totalUsers, totalProjects, runningProjects, totalDatabases] = await Promise.all([
@@ -197,6 +199,12 @@ export class AppController {
         name: true,
         role: true,
         parentId: true,
+        parent: {
+          select: {
+            email: true,
+            name: true,
+          }
+        },
         customRoleId: true,
         customRole: {
           select: {
@@ -265,7 +273,7 @@ export class AppController {
       if (targetUser.role === 'ADMIN') {
         throw new ForbiddenException('Chỉ Super Admin mới được phép sửa quyền của Super Admin khác.');
       }
-      
+
       const targetUserAdminId = targetUser.parentId || targetUser.id;
       const requesterAdminId = requester.parentId || requester.id;
       if (targetUserAdminId !== requesterAdminId) {
@@ -390,14 +398,21 @@ export class AppController {
       throw new NotFoundException('Người dùng không tồn tại.');
     }
 
-    if (userToDelete.role === 'ADMIN') {
-      throw new BadRequestException('Không thể xóa tài khoản Admin.');
+    const isSystemAdmin = requester.role === 'ADMIN' && requester.email === 'superadmin@potato.com';
+    const isTargetSystemAdmin = userToDelete.role === 'ADMIN' && userToDelete.email === 'superadmin@potato.com';
+
+    if (isTargetSystemAdmin) {
+      throw new BadRequestException('Không thể xóa tài khoản Super Admin.');
+    }
+
+    // Nếu không phải Super Admin thì cấm xóa Admin Doanh nghiệp
+    if (!isSystemAdmin && userToDelete.role === 'ADMIN') {
+      throw new BadRequestException('Chỉ Super Admin mới được phép xóa tài khoản Admin Doanh nghiệp.');
     }
 
     // Tenant isolation:
     // [CÔ LẬP XÓA TÀI KHOẢN]
     // Chặn đứng việc Công ty A táy máy xóa nhân viên của Công ty B.
-    const isSystemAdmin = requester.role === 'ADMIN' && requester.email === 'superadmin@potato.com';
     if (!isSystemAdmin && userToDelete.parentId !== requester.id) {
       throw new ForbiddenException('Bạn không có quyền xóa tài khoản của doanh nghiệp khác.');
     }
@@ -452,12 +467,14 @@ export class AppController {
     const isRequesterAdmin = requester.role === 'ADMIN' && requester.email === 'superadmin@potato.com';
 
     // Ràng buộc bảo mật:
+    const isTargetSystemAdmin = targetUser.role === 'ADMIN' && targetUser.email === 'superadmin@potato.com';
+
     if (targetUser.role === 'ADMIN') {
       if (!isRequesterAdmin) {
-        throw new ForbiddenException('Chỉ Admin tối cao mới có quyền sửa đổi thông tin của Admin khác.');
+        throw new ForbiddenException('Chỉ Admin tối cao mới có quyền sửa đổi thông tin của Admin doanh nghiệp.');
       }
-      if (targetUser.id !== requester.id) {
-        throw new ForbiddenException('Admin không được phép sửa đổi thông tin của Admin khác.');
+      if (isTargetSystemAdmin && targetUser.id !== requester.id) {
+        throw new ForbiddenException('Không được phép sửa đổi thông tin của Super Admin khác.');
       }
     } else {
       if (!isRequesterAdmin && targetUser.parentId !== requester.id) {

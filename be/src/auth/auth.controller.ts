@@ -12,13 +12,19 @@ export class AuthController {
     private readonly authService: AuthService,
   ) {}
 
-  /** POST /api/auth/register — Tạo tài khoản người dùng mới (Nhân viên mới) */
+  /** 
+   * POST /api/auth/register — Tạo tài khoản người dùng mới (Nhân viên mới) 
+   * Nhận dữ liệu từ form Frontend, chuyển xuống authService để mã hoá mật khẩu và lưu DB
+   */
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
-  /** POST /api/auth/login — Đăng nhập hệ thống, trả về Token (JWT) */
+  /** 
+   * POST /api/auth/login — Đăng nhập hệ thống, trả về Token (JWT) 
+   * Kiểm tra thông tin, nếu đúng mật khẩu thì trả về một chuỗi Token (JWT) cho Frontend giữ làm chìa khoá
+   */
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto) {

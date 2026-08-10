@@ -512,25 +512,33 @@ export default function AccessControlPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            {u.role === "ADMIN" ? (
-                              u.email === "superadmin@potato.com" ? (
-                                <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] gap-1">
-                                  <Shield className="h-3 w-3" /> Super Admin
+                            <div className="flex flex-col items-start gap-1.5">
+                              {u.role === "ADMIN" ? (
+                                u.email === "superadmin@potato.com" ? (
+                                  <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] gap-1">
+                                    <Shield className="h-3 w-3" /> Super Admin
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] gap-1">
+                                    <Shield className="h-3 w-3" /> Admin Project
+                                  </Badge>
+                                )
+                              ) : u.customRole ? (
+                                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-medium">
+                                  🎭 {u.customRole.name}
                                 </Badge>
                               ) : (
-                                <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] gap-1">
-                                  <Shield className="h-3 w-3" /> Admin Project
+                                <Badge variant="secondary" className="text-[10px] text-muted-foreground">
+                                  👤 Thành viên thường
                                 </Badge>
-                              )
-                            ) : u.customRole ? (
-                              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-medium">
-                                🎭 {u.customRole.name}
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-[10px] text-muted-foreground">
-                                👤 Thành viên thường
-                              </Badge>
-                            )}
+                              )}
+                              
+                              {u.parent && (
+                                <span className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded-sm border border-border/50 truncate max-w-[150px]" title={u.parent.email}>
+                                  Tạo bởi: {u.parent.name || u.parent.email}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 font-medium text-foreground">{u._count?.projects ?? 0} dự án</td>
                           <td className="px-6 py-4 text-xs text-muted-foreground">
@@ -553,7 +561,7 @@ export default function AccessControlPage() {
                                 size="icon"
                                 className="h-8 w-8 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
                                 onClick={() => setDeleteConfirmUser(u)}
-                                disabled={isMe || u.role === "ADMIN"}
+                                disabled={isMe || u.email === "superadmin@potato.com" || (u.role === "ADMIN" && currentUser?.email !== "superadmin@potato.com")}
                                 title="Xóa tài khoản"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -592,10 +600,15 @@ export default function AccessControlPage() {
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
                   <CardHeader className="pb-2 pl-5 pr-4 pt-4">
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <CardTitle className="text-base font-bold flex items-center gap-1.5 text-foreground">
+                      <div className="min-w-0">
+                        <CardTitle className="text-base font-bold flex items-center gap-1.5 text-foreground truncate">
                           🎭 {role.name}
                         </CardTitle>
+                        {role.owner && (
+                          <div className="text-[10px] text-muted-foreground mt-1 truncate bg-muted/30 inline-block px-1.5 py-0.5 rounded border border-border/50" title={role.owner.email}>
+                            Tạo bởi: {role.owner.name || role.owner.email}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button

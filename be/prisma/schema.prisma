@@ -79,6 +79,7 @@ model Project {
   notificationsEnabled Boolean           @default(true)
   volumeMapping       String?            @default("/app/storage")
   slackWebhook        String?
+  webhookSecret       String?
   alertInterval       Int                @default(5)
   userId              Int
   user           User               @relation(fields: [userId], references: [id])

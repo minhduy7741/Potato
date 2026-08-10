@@ -15,6 +15,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -161,9 +162,6 @@ export class ProjectsController {
   async start(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
     this.logger.log(`PATCH /projects/${id}/start`);
     
-    // [TRẢ LỜI HỘI ĐỒNG] - CÂU HỎI KIỂM TRA QUOTA RAM
-    // Code ở đây sẽ lôi toàn bộ dự án ĐANG CHẠY (status = 'running') của Công ty (Tenant) ra tính tổng.
-    // Nếu (Tổng RAM đang chạy + RAM chuẩn bị chạy) > Quota cho phép (maxRam) -> Chặn và báo lỗi BadRequest.
     // Check Quota RAM
     const requester = await this.prisma.user.findUnique({
       where: { id: req.user.id }
@@ -507,7 +505,35 @@ export class ProjectsController {
     @Param('id', ParseIntPipe) id: number,
     @Param('memberId', ParseIntPipe) memberId: number,
   ) {
-    this.logger.log(`DELETE /projects/${id}/members/${memberId} — Remove member`);
+    this.logger.log(`DELETE /projects/${id}/members/${memberId} - Remove member`);
     return this.projectsService.deleteProjectMember(id, memberId);
+  }
+
+  // --- CI/CD Webhook ---
+
+  @Get(':id/webhook-secret')
+  @RequirePermission('project:read')
+  async getWebhookSecret(@Param('id', ParseIntPipe) id: number) {
+    this.logger.log(`GET /projects/${id}/webhook-secret`);
+    const secret = await this.projectsService.getOrCreateWebhookSecret(id);
+    return { secret };
+  }
+
+  @Post(':id/webhook-secret/regenerate')
+  @RequirePermission('project:deploy')
+  async regenerateWebhookSecret(@Param('id', ParseIntPipe) id: number) {
+    this.logger.log(`POST /projects/${id}/webhook-secret/regenerate`);
+    const secret = await this.projectsService.regenerateWebhookSecret(id);
+    return { secret };
+  }
+
+  @Post(':id/webhook')
+  async handleWebhook(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('token') token: string,
+    @Body() payload: any,
+  ) {
+    this.logger.log(`POST /projects/${id}/webhook (Webhook received)`);
+    return this.projectsService.handleWebhook(id, token, payload);
   }
 }

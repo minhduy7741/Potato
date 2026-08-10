@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { GitBranch, Upload, CheckCircle, XCircle, Clock, Loader2, ExternalLink, RefreshCw, RotateCcw } from "lucide-react"
+import { GitBranch, Upload, CheckCircle, XCircle, Clock, Loader2, ExternalLink, RefreshCw, RotateCcw, Webhook, Copy } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +35,9 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
   const [deployments, setDeployments] = useState<DeploymentLogEntry[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
   const [expandedLogId, setExpandedLogId] = useState<number | null>(null)
+  
+  const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
+  const [isRegenerating, setIsRegenerating] = useState(false)
 
   const fetchDeployments = async () => {
     try {
@@ -46,9 +49,53 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
     finally { setIsLoadingHistory(false) }
   }
 
+  const fetchWebhookSecret = async () => {
+    try {
+      const data = await apiFetch<{ secret: string }>(`/projects/${project.id}/webhook-secret`)
+      setWebhookSecret(data.secret)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const regenerateWebhookSecret = async () => {
+    setIsRegenerating(true)
+    try {
+      toast.loading("Đang tạo mới token...", { id: "webhook-secret" })
+      const data = await apiFetch<{ secret: string }>(`/projects/${project.id}/webhook-secret/regenerate`, { method: "POST" })
+      setWebhookSecret(data.secret)
+      toast.success("Tạo token thành công", { id: "webhook-secret" })
+    } catch (err: any) {
+      toast.error(err.message, { id: "webhook-secret" })
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
+  const mockWebhookTrigger = async () => {
+    try {
+      toast.loading("Đang gửi giả lập Webhook...", { id: "mock-webhook" })
+      await apiFetch(`/projects/${project.id}/webhook?token=${webhookSecret}`, {
+        method: "POST",
+        body: JSON.stringify({
+          ref: `refs/heads/${project.deployBranch || 'main'}`,
+          repository: { html_url: project.gitRepo }
+        })
+      })
+      toast.success("Đã kích hoạt Webhook tự động! 🚀", { id: "mock-webhook" })
+      onUpdate()
+      fetchDeployments()
+    } catch (err: any) {
+      toast.error(err.message, { id: "mock-webhook" })
+    }
+  }
+
   useEffect(() => {
     fetchDeployments()
-  }, [project.id])
+    if (project.gitRepo) {
+      fetchWebhookSecret()
+    }
+  }, [project.id, project.gitRepo])
 
   const handleDeploy = async () => {
     if (!gitRepo.trim()) {
@@ -184,6 +231,71 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Webhook Config */}
+      {project.gitRepo && webhookSecret && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.05 }}>
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10">
+                  <Webhook className="h-5 w-5 text-indigo-500" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">CI/CD Webhook</CardTitle>
+                  <CardDescription>Tự động gieo mầm khi có Push lên nhánh {project.deployBranch || 'main'}</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg bg-indigo-500/5 border border-indigo-500/20 p-4 text-sm text-indigo-200">
+                <p>Hãy dán đường dẫn dưới đây vào phần <strong>Settings &gt; Webhooks</strong> của Repository trên GitHub/GitLab. Chọn trigger khi có sự kiện <code>push</code> để Potato tự động kéo mã nguồn mới.</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Webhook Payload URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={`http://127.0.0.1:3000/api/projects/${project.id}/webhook?token=${webhookSecret}`}
+                    className="bg-muted/50 border-border font-mono text-xs flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    className="border-border hover:bg-muted shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`http://127.0.0.1:3000/api/projects/${project.id}/webhook?token=${webhookSecret}`)
+                      toast.success("Đã copy Webhook URL")
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mt-4">
+                <Button
+                  variant="outline"
+                  className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10"
+                  onClick={mockWebhookTrigger}
+                >
+                  <Webhook className="mr-2 h-4 w-4" />
+                  Giả lập Webhook
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={regenerateWebhookSecret}
+                  disabled={isRegenerating}
+                >
+                  <RotateCcw className={`mr-2 h-4 w-4 ${isRegenerating ? "animate-spin" : ""}`} />
+                  Tạo mới Token
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Deployment History */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>

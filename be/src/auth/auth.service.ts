@@ -18,6 +18,7 @@ export class AuthService {
 
   // ─── Helpers ─────────────────────────────────────────────────────────
 
+  // Ký và tạo ra mã thông báo JWT bí mật chứa thông tin cơ bản của user
   private signToken(user: { id: number; email: string; name: string | null; role: string }) {
     return this.jwtService.sign({
       sub: user.id,
@@ -37,6 +38,7 @@ export class AuthService {
       throw new ConflictException('Email đã tồn tại trên hệ thống');
     }
 
+    // Mã hoá mật khẩu thành chuỗi hash bảo mật bằng thuật toán Bcrypt
     const hashedPassword = await bcrypt.hash(password, 10);
     // Nếu có parentId -> Nhân viên do Admin Project tạo -> Cấp vai trò DEVELOPER
     // Nếu không có parentId -> Người dùng tự đăng ký -> Cấp vai trò ADMIN (Admin Project)
@@ -79,6 +81,7 @@ export class AuthService {
       throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
     }
 
+    // So khớp mật khẩu người dùng nhập với chuỗi hash trong CSDL
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Thông tin đăng nhập không chính xác');

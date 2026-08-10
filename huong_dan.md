@@ -90,6 +90,19 @@ Theo dõi độ ngốn RAM, CPU của các ứng dụng, vẽ biểu đồ và t
   - **Giám sát máy chủ Host:** [app.controller.ts](file:///e:/Potato/be/src/app.controller.ts) -> Hàm `getSystemStats` (Đo tổng dung lượng vật lý của máy chủ).
   - **Cảnh báo (Slack):** [projects.service.ts](file:///e:/Potato/be/src/projects/projects.service.ts) -> Hàm `sendSlackAlert` (Tự động gửi thông báo về Slack khi có lỗi hoặc tràn RAM).
 
+### 8. Đăng ký & Đăng nhập (Authentication & JWT)
+Bảo mật hệ thống bằng mã thông báo (JSON Web Token - JWT) và phân quyền truy cập.
+- **Frontend (FE):**
+  - **Vị trí trên giao diện:** Trang Đăng nhập (`/login`) và Đăng ký (`/register`).
+  - **Trang Đăng nhập:** [page.tsx](file:///e:/Potato/fe/app/login/page.tsx)
+  - **Trang Đăng ký:** [page.tsx](file:///e:/Potato/fe/app/register/page.tsx)
+- **Backend (BE):**
+  - **File:** [auth.controller.ts](file:///e:/Potato/be/src/auth/auth.controller.ts) và [auth.service.ts](file:///e:/Potato/be/src/auth/auth.service.ts)
+  - **Các hàm chính:** `login` và `register`.
+  - **Cơ chế (Logic):** 
+    - Khi người dùng đăng nhập thành công, hệ thống sử dụng thư viện `@nestjs/jwt` để mã hóa thông tin (ID, Email, Role) thành 1 chuỗi **JWT Token** bí mật trả về cho Frontend. 
+    - Frontend lưu chuỗi này lại. Từ đó về sau, mỗi khi gọi API, Frontend bắt buộc phải gửi kèm cái Token này lên (qua Header) để Backend xác thực định danh.
+
 ---
 
 ## 🎯 CÂU HỎI VẤN ĐÁP "HÓC BÚA" CỦA HỘI ĐỒNG & CÁCH TRẢ LỜI
@@ -113,6 +126,12 @@ Theo dõi độ ngốn RAM, CPU của các ứng dụng, vẽ biểu đồ và t
   1. Frontend gửi yêu cầu HTTP (REST API) hoặc kết nối WebSocket đến Backend (NestJS).
   2. Backend NestJS sau khi kiểm tra Token, Phân quyền (Role/Permission) hợp lệ thì mới sử dụng thư viện `dockerode`.
   3. Thư viện `dockerode` này sẽ nói chuyện với lõi Docker dưới máy chủ (Docker Daemon) thông qua giao thức **Unix Socket Pipe** (`/var/run/docker.sock` trên Linux hoặc Pipe trên Windows). Nhờ vậy hệ thống được cách ly an toàn ạ."
+
+**❓ Câu hỏi 4: "Dữ liệu giám sát hệ thống (RAM, CPU, Ổ cứng) được em lấy từ đâu ra? Ở ổ đĩa nào?"**
+- **Trả lời:** "Dạ, dữ liệu giám sát của em được lấy từ **2 nguồn khác biệt** tuỳ theo mục đích:
+  1. **Với dữ liệu tổng máy chủ (System Host):** Em dùng trực tiếp thư viện `os` và `fs` của NodeJS chọc thẳng vào Kernel hệ điều hành để đo RAM vật lý (`os.totalmem()`) và CPU (`os.cpus()`). Riêng Ổ cứng thì em dùng hàm `statfsSync` để đo dung lượng của **chính ổ đĩa đang chứa thư mục chạy mã nguồn Backend**.
+  2. **Với dữ liệu của từng dự án con (Project Metrics):** Em không lấy từ OS nữa mà gọi qua API của Docker. Lõi Docker tự động duy trì các file **cgroups (Control Groups)** để giới hạn tài nguyên. Code của em sẽ liên tục đọc file cgroups này mỗi 3 giây thông qua hàm `container.stats()` để ra được RAM/CPU mà dự án đó đang ngốn ạ."
+- **Code minh chứng:** Nằm ở file [app.controller.ts](file:///e:/Potato/be/src/app.controller.ts) (dòng 50 - đo tổng RAM/Disk) và [stats-collector.service.ts](file:///e:/Potato/be/src/projects/stats-collector.service.ts) (Đo thông số Docker). Em đã note trong code chữ `[TRẢ LỜI HỘI ĐỒNG]`.
 
 ---
 
@@ -168,13 +187,23 @@ CMD ["./main"]
 ```
 - **Nơi dán code 2 (Vẽ giao diện HTML):** Cuộn xuống dưới (khoảng **dòng 60**), tìm đoạn code vẽ thẻ `<Input>` của tên dự án (`Project Name`), và dán khối này ngay bên dưới nó:
 ```tsx
-          <div className="space-y-2">
-            <Label htmlFor="description">Mô tả dự án (Tùy chọn)</Label>
-            <Input
-              id="description"
-              placeholder="Ví dụ: Backend API cho App Mobile..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
           </div>
 ```
+
+### 🔧 Thử thách 4: "Mô phỏng quy trình (Luồng) cấp cứu khi Web sập do thiếu Database"
+- **Tình huống:** Bị lỗi "Sập Container" (hoặc từ chối kết nối) do lỡ tay bấm **Triển khai Git** trước khi thêm Biến môi trường Database.
+- **Cách trả lời & Thao tác chữa cháy:**
+  - "Dạ thưa hội đồng, đây là lỗi rất phổ biến. Vì hệ thống của em thiết kế các Container độc lập, nên nếu chưa có biến môi trường thì app không kết nối được Database và sẽ tự thoát. Cách xử lý cực kỳ đơn giản (gọi là Redeploy Workflow):
+  - **Bước 1:** Em sang tab **Biến môi trường**, bấm thêm/kết nối Database như bình thường.
+  - **Bước 2:** Em quay lại tab Tổng quan, bấm nút **Redeploy (Triển khai lại)**.
+  - **Bước 3:** Hệ thống sẽ tự động bắt lấy các biến môi trường mới nhất, đập bỏ Container lỗi và tạo Container mới. App sẽ sống lại ngay lập tức mà không cần phải gỡ dự án ra cài lại ạ!"
+
+### 🔧 Thử thách 5: "Nếu khách hàng tự viết Dockerfile (custom) mà ghi sai cú pháp thì hệ thống xử lý thế nào?"
+- **Cách trả lời (Khoe tính năng xịn):**
+  - "Dạ thưa hội đồng, hệ thống của em được thiết kế theo chuẩn **Triển khai Không gián đoạn (Zero-Downtime Deployment)** và có cơ chế **Bắt lỗi an toàn (Graceful Error Handling)**.
+  - Cụ thể, khi phát hiện Dockerfile của người dùng tải lên, em sẽ cho Build Image ở một luồng độc lập. Nếu Dockerfile ghi sai cú pháp, lệnh Build sẽ văng lỗi. Lúc này, khối \`try...catch\` ở hàm \`deployFromGit\` sẽ bắt được lỗi này.
+  - **Hệ thống sẽ làm 3 việc:**
+    1. Đẩy toàn bộ dòng log lỗi đó lên màn hình Terminal của Frontend để khách hàng biết họ ghi sai ở dòng nào.
+    2. Đánh dấu bản Deploy này là \`Failed\` (Thất bại).
+    3. **Quan trọng nhất:** Hệ thống **VẪN GIỮ NGUYÊN Container cũ** đang chạy! Do đó, website của khách hàng không hề bị sập một giây nào cả dù họ vừa deploy lỗi. Họ chỉ việc lên Github sửa lại Dockerfile rồi bấm Deploy lại là xong ạ!"
+- **Code minh chứng:** Mở file \`projects.service.ts\`, cuộn xuống dòng **1466** (chỗ khối \`catch (error)\`). Giải thích rằng nhờ khối catch này mà hệ thống bắt được lỗi, cập nhật trạng thái \`failed\`, nhưng hoàn toàn không đụng chạm hay xóa đi Container cũ đang chạy.

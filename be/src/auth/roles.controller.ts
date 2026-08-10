@@ -39,7 +39,12 @@ export class RolesController {
     await this.checkPermission(req);
     const isSystemAdmin = req.user?.role === 'ADMIN' && req.user?.email === 'superadmin@potato.com';
     if (isSystemAdmin) {
-      return this.prisma.customRole.findMany({ orderBy: { createdAt: 'asc' } });
+      return this.prisma.customRole.findMany({ 
+        orderBy: { createdAt: 'asc' },
+        include: {
+          owner: { select: { name: true, email: true } }
+        }
+      });
     }
 
     const dbUser = await this.prisma.user.findUnique({
@@ -52,7 +57,10 @@ export class RolesController {
     // Chỉ trả về role của tenant này, KHÔNG trả về role của tenant khác hay system role (ownerId=null)
     return this.prisma.customRole.findMany({
       where: { ownerId: tenantAdminId },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      include: {
+        owner: { select: { name: true, email: true } }
+      }
     });
   }
 

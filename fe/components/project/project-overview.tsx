@@ -78,9 +78,11 @@ function InfoRow({ icon, label, value, copyable, link }: InfoRowProps) {
 
 interface ProjectOverviewProps {
   project: any
+  canEdit?: boolean
 }
 
-export function ProjectOverview({ project }: ProjectOverviewProps) {
+export function ProjectOverview({ project, canEdit = true }: ProjectOverviewProps) {
+  const router = useRouter()
   const [deployments, setDeployments] = useState<any[]>([])
   const [loadingDeployments, setLoadingDeployments] = useState(true)
   const [activities, setActivities] = useState<any[]>([])

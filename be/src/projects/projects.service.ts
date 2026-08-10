@@ -475,10 +475,14 @@ export class ProjectsService {
     // 2. Xóa Docker container nếu nó đang tồn tại
     if (project.containerId) {
       try {
+        await this.dockerService.stopContainer(project.containerId);
         await this.dockerService.removeContainer(project.containerId);
+        
+        // Đợi một chút để Docker dọn dẹp container khỏi image
+        await new Promise(r => setTimeout(r, 500));
       } catch (error) {
         this.logger.warn(
-          `Failed to remove container ${project.containerId}: ${error}`,
+          `Failed to clean up container ${project.containerId}: ${error}`,
         );
       }
     }
@@ -1104,7 +1108,8 @@ export class ProjectsService {
       const hasDockerfile = fs.existsSync(path.join(tmpDir, 'Dockerfile'));
       
       let detectedLang = 'custom';
-      if (!hasDockerfile) {
+
+      const generateStandardDockerfile = async () => {
         if (fs.existsSync(path.join(tmpDir, 'composer.json'))) {
           detectedLang = 'php-laravel';
           await updateLog('Phát hiện PHP/Laravel (composer.json). Đang tạo cấu hình Docker...');
@@ -1236,17 +1241,37 @@ RUN chmod -R 755 /usr/share/nginx/html
 EXPOSE 80
           `.trim());
         }
+      };
+
+      if (!hasDockerfile) {
+        await generateStandardDockerfile();
       } else {
         await updateLog('Phát hiện Dockerfile do người dùng tự cung cấp.');
       }
 
       // Bắt đầu Build Image
       await updateLog(`Đang Build Image (Loại: ${detectedLang}). Việc này có thể mất vài phút...`);
-      await this.dockerService.buildImage(tmpDir, imageName, (msg) => {
-        if (msg.startsWith('Step') || msg.toLowerCase().includes('error')) {
-          updateLog(msg);
+      try {
+        await this.dockerService.buildImage(tmpDir, imageName, (msg) => {
+          if (msg.startsWith('Step') || msg.toLowerCase().includes('error')) {
+            updateLog(msg);
+          }
+        });
+      } catch (buildErr: any) {
+        if (hasDockerfile) {
+          await updateLog(`⚠️ CẢNH BÁO: Dockerfile do bạn cung cấp bị lỗi cú pháp! Hệ thống đang tự động xóa Dockerfile lỗi và áp dụng cấu hình tự động (Auto-Language Detection) để cứu vãn...`);
+          fs.unlinkSync(path.join(tmpDir, 'Dockerfile'));
+          await generateStandardDockerfile();
+          await updateLog(`Đang thử Build lại bằng cấu hình chuẩn (Loại: ${detectedLang})...`);
+          await this.dockerService.buildImage(tmpDir, imageName, (msg) => {
+            if (msg.startsWith('Step') || msg.toLowerCase().includes('error')) {
+              updateLog(msg);
+            }
+          });
+        } else {
+          throw buildErr;
         }
-      });
+      }
       await updateLog('Build Image thành công!');
       // Đánh tag phiên bản là latest
       await this.dockerService.tagImage(imageName, `potato-app-${project.id}`, 'latest');
@@ -1283,12 +1308,7 @@ EXPOSE 80
 
       const portBindings: any = {};
       portBindings[`${targetPort}/tcp`] = [{ HostPort: String(newHostPort) }];
-      if (detectedLang === 'custom') {
-        portBindings['3000/tcp'] = [{ HostPort: String(newHostPort) }];
-        portBindings['80/tcp'] = [{ HostPort: String(newHostPort) }];
-        portBindings['8080/tcp'] = [{ HostPort: String(newHostPort) }];
-        portBindings['8000/tcp'] = [{ HostPort: String(newHostPort) }];
-      }
+
 
       // Thiết lập ổ cứng lưu trữ (Persistent Volume)
       const hostVolumeDir = path.resolve(path.join(process.cwd(), 'uploads', 'volumes', `project-${project.id}`));
@@ -1347,20 +1367,24 @@ EXPOSE 80
       // ── Health Check (Zero-downtime) ──
       await updateLog('Đang kiểm tra trạng thái hoạt động của container mới...');
       let isHealthy = false;
-      const http = require('http');
+      const net = require('net');
 
       for (let i = 0; i < 15; i++) {
         const checkPromise = new Promise<boolean>((resolve) => {
-          const req = http.get(`http://localhost:${newHostPort}`, (res: any) => {
-            resolve(true); // Responded, port is open
+          const socket = new net.Socket();
+          socket.setTimeout(1000);
+          socket.on('connect', () => {
+            socket.destroy();
+            resolve(true);
           });
-          req.on('error', () => {
+          socket.on('timeout', () => {
+            socket.destroy();
             resolve(false);
           });
-          req.setTimeout(1000, () => {
-            req.destroy();
+          socket.on('error', () => {
             resolve(false);
           });
+          socket.connect(newHostPort, '127.0.0.1');
         });
 
         const ok = await checkPromise;
@@ -1387,7 +1411,8 @@ EXPOSE 80
         newHostPort,
         project.name,
         project.customDomain || undefined,
-        project.sslStatus === 'active'
+        project.sslStatus === 'active',
+        targetPort
       );
 
       if (hasOldContainer && project.containerId) {
@@ -1515,7 +1540,7 @@ EXPOSE 80
   private async findProjectOrFail(projectId: number) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      include: { databases: true, envVariables: true },
+      include: { databases: true, envVariables: true, members: true },
     });
 
     if (!project) {
@@ -1880,8 +1905,6 @@ EXPOSE 80
 
       const portBindings: any = {};
       portBindings[`${targetPort}/tcp`] = [{ HostPort: String(newHostPort) }];
-      portBindings['3000/tcp'] = [{ HostPort: String(newHostPort) }];
-      portBindings['80/tcp'] = [{ HostPort: String(newHostPort) }];
 
       const hostVolumeDir = path.resolve(path.join(process.cwd(), 'uploads', 'volumes', `project-${project.id}`));
       fs.mkdirSync(hostVolumeDir, { recursive: true });
@@ -1907,20 +1930,24 @@ EXPOSE 80
       await updateLog('Đang kiểm tra trạng thái hoạt động của container mới...');
 
       let isHealthy = false;
-      const http = require('http');
+      const net = require('net');
 
       for (let i = 0; i < 15; i++) {
         const checkPromise = new Promise<boolean>((resolve) => {
-          const req = http.get(`http://localhost:${newHostPort}`, (res: any) => {
+          const socket = new net.Socket();
+          socket.setTimeout(1000);
+          socket.on('connect', () => {
+            socket.destroy();
             resolve(true);
           });
-          req.on('error', () => {
+          socket.on('timeout', () => {
+            socket.destroy();
             resolve(false);
           });
-          req.setTimeout(1000, () => {
-            req.destroy();
+          socket.on('error', () => {
             resolve(false);
           });
+          socket.connect(newHostPort, '127.0.0.1');
         });
 
         const ok = await checkPromise;
@@ -1944,7 +1971,8 @@ EXPOSE 80
         newHostPort,
         project.name,
         project.customDomain || undefined,
-        project.sslStatus === 'active'
+        project.sslStatus === 'active',
+        targetPort
       );
       await updateLog('Đã cập nhật định tuyến Nginx Proxy.');
 
@@ -2104,6 +2132,63 @@ EXPOSE 80
               );
             }
           }
+        } else {
+          // [AUTO-SCALING LOGIC]
+          if (project.autoScale) {
+            try {
+              const stats = await this.dockerService.getContainerStats(project.containerId!);
+              const isCpuHigh = stats.cpuPercent > 80;
+              const isRamHigh = stats.memoryPercent > 80;
+
+              if (isCpuHigh || isRamHigh) {
+                let newCpu = project.cpuLimit;
+                let newRam = project.ramLimit;
+                let scaled = false;
+
+                if (isCpuHigh && newCpu < 4) {
+                  newCpu = Math.min(newCpu + 0.5, 4);
+                  scaled = true;
+                }
+                if (isRamHigh && newRam < 4096) {
+                  newRam = Math.min(newRam + 512, 4096);
+                  scaled = true;
+                }
+
+                if (scaled) {
+                  this.logger.log(`🚀 Auto-scaling project ${project.name}: CPU -> ${newCpu}, RAM -> ${newRam}MB`);
+                  
+                  await this.dockerService.updateContainerResources(project.containerId!, {
+                    cpuCores: newCpu,
+                    ramMB: newRam,
+                  });
+
+                  await this.prisma.project.update({
+                    where: { id: project.id },
+                    data: { cpuLimit: newCpu, ramLimit: newRam },
+                  });
+
+                  await this.prisma.activityLog.create({
+                    data: {
+                      projectId: project.id,
+                      type: 'UPDATE_RESOURCES',
+                      message: `Tự động bơm thêm tài nguyên do quá tải (Auto-scale): RAM ${newRam}MB, CPU ${newCpu} Cores.`
+                    }
+                  });
+
+                  if (project.slackWebhook) {
+                    await this.sendSlackAlert(
+                      project.slackWebhook,
+                      project.name,
+                      'warning',
+                      `📈 **Auto-Scaling Kích hoạt:** Dự án đang bị quá tải (CPU: ${stats.cpuPercent.toFixed(1)}%, RAM: ${stats.memoryPercent.toFixed(1)}%).\n🚀 **Hành động:** Hệ thống đã tự động bơm thêm tài nguyên nóng (Live Scale) lên **${newCpu} Cores, ${newRam}MB RAM** mà không cần khởi động lại.`
+                    );
+                  }
+                }
+              }
+            } catch (statsErr: any) {
+              this.logger.warn(`Failed to check stats for auto-scaling project ${project.id}: ${statsErr.message}`);
+            }
+          }
         }
       } catch (err: any) {
         const isNotFound = err.message?.toLowerCase().includes('no such container') || err.statusCode === 404 || err.status === 404;
@@ -2126,5 +2211,64 @@ EXPOSE 80
         }
       }
     }
+  }
+
+  // --- CI/CD Webhook ---
+
+  async getOrCreateWebhookSecret(projectId: number): Promise<string> {
+    let project = await this.findProjectOrFail(projectId);
+    if (!project.webhookSecret) {
+      const newSecret = randomBytes(32).toString('hex');
+      project = await this.prisma.project.update({
+        where: { id: projectId },
+        data: { webhookSecret: newSecret },
+        include: { databases: true, envVariables: true, members: true },
+      });
+    }
+    return project.webhookSecret as string;
+  }
+
+  async regenerateWebhookSecret(projectId: number): Promise<string> {
+    await this.findProjectOrFail(projectId);
+    const newSecret = randomBytes(32).toString('hex');
+    const project = await this.prisma.project.update({
+      where: { id: projectId },
+      data: { webhookSecret: newSecret },
+    });
+    return project.webhookSecret as string;
+  }
+
+  async handleWebhook(projectId: number, token: string, payload: any): Promise<{ message: string }> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId }
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project not found`);
+    }
+
+    if (!project.webhookSecret || project.webhookSecret !== token) {
+      throw new BadRequestException(`Invalid webhook token`);
+    }
+
+    if (!project.gitRepo || !project.deployBranch) {
+      throw new BadRequestException(`Project is not configured for Git deployment`);
+    }
+
+    // Check payload (supports GitHub/GitLab basic pushes)
+    const ref = payload.ref; // e.g., 'refs/heads/main'
+    const expectedRef = `refs/heads/${project.deployBranch}`;
+    
+    if (ref && ref !== expectedRef) {
+      this.logger.log(`Webhook ignored for project ${projectId}. Push was to ${ref}, expected ${expectedRef}`);
+      return { message: 'Ignored: push to different branch' };
+    }
+
+    this.logger.log(`Webhook triggered deployment for project ${projectId}`);
+    
+    // Trigger deployment
+    await this.deployFromGit(projectId, project.gitRepo, project.deployBranch, project.gitToken || undefined);
+
+    return { message: 'Deployment triggered successfully' };
   }
 }
