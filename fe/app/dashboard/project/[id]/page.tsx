@@ -183,10 +183,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 {project.containerId
                   ? <>Container: <span className="font-mono text-xs">{project.containerId?.substring(0, 12)}</span> · </>
                   : null}
-                Subdomain: <span className="font-mono text-primary mr-3">{project.subdomain}.{BASE_DOMAIN}</span>
-                {project.hostPort && (
-                  <>· Local Port: <span className="font-mono text-primary ml-1">localhost:{project.hostPort}</span></>
-                )}
+                Domain: <span className="font-mono text-primary mr-3">{project.customDomain || `${project.subdomain}.${BASE_DOMAIN}`}</span>
               </p>
             </div>
           </div>
@@ -220,7 +217,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               Làm mới
             </Button>
             <Button variant="outline" size="sm" className="border-border hover:bg-primary/10 hover:text-primary" asChild>
-              <Link href={project.hostPort ? `http://localhost:${project.hostPort}` : `http://${project.subdomain}.${BASE_DOMAIN}`} target="_blank">
+              <Link href={project.customDomain ? `http://${project.customDomain}` : `http://${project.subdomain}.${BASE_DOMAIN}`} target="_blank">
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Truy cập URL
               </Link>
