@@ -6,7 +6,7 @@ import { exec } from 'child_process';
 @Injectable()
 export class NginxService {
   private readonly logger = new Logger(NginxService.name);
-  private readonly configDir = path.resolve(process.cwd(), 'nginx_configs');
+  private readonly configDir = process.env.NGINX_CONF_DIR || path.resolve(process.cwd(), 'nginx_configs');
 
   constructor() {
     if (!fs.existsSync(this.configDir)) {
@@ -139,7 +139,7 @@ ${locationBlock}
    * Reloads Nginx gracefully
    */
   private reloadNginx(): void {
-    exec('nginx -s reload', (error, stdout, stderr) => {
+    exec('sudo nginx -s reload', (error, stdout, stderr) => {
       if (error) {
         this.logger.warn(`⚠️ Could not reload Nginx automatically (Are you on Windows/Dev or is Nginx not running?). Error: ${error.message}`);
         return;
