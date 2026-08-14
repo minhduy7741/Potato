@@ -12,7 +12,7 @@ const execAsync = promisify(exec);
 @Injectable()
 export class SslService {
   private readonly logger = new Logger(SslService.name);
-  private readonly sslDir = path.resolve(process.cwd(), 'ssl_certs');
+  private readonly sslDir = process.env.NGINX_SSL_DIR || '/etc/nginx/ssl';
 
   constructor(
     private readonly prisma: PrismaService,

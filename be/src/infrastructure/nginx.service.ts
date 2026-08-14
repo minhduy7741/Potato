@@ -38,8 +38,9 @@ export class NginxService {
 
     let config = '';
 
-    const sslCertPath = path.resolve(process.cwd(), 'ssl_certs', customDomain || subdomain, 'fullchain.pem');
-    const sslKeyPath = path.resolve(process.cwd(), 'ssl_certs', customDomain || subdomain, 'privkey.pem');
+    const sslDir = process.env.NGINX_SSL_DIR || '/etc/nginx/ssl';
+    const sslCertPath = path.resolve(sslDir, customDomain || subdomain, 'fullchain.pem');
+    const sslKeyPath = path.resolve(sslDir, customDomain || subdomain, 'privkey.pem');
 
     const isFastCGI = targetPort === '9000';
     const locationBlock = isFastCGI ? `
