@@ -126,7 +126,7 @@ export function ProjectOverview({ project, canEdit = true }: ProjectOverviewProp
                 icon={<ExternalLink className="h-4 w-4" />}
                 label="Truy cập trực tiếp (Bypass Proxy)"
                 value={typeof window !== 'undefined' ? `${window.location.hostname}:${project.hostPort}` : `localhost:${project.hostPort}`}
-                link
+                link={typeof window !== 'undefined' && window.location.hostname === 'localhost'}
                 copyable
               />
             )}
