@@ -32,7 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner"
 import Link from "next/link"
 import { CreateDatabaseModal } from "@/components/dashboard/create-database-modal"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, API_BASE } from "@/lib/api"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -158,7 +158,7 @@ export default function DatabasesPage() {
     setExportingId(id);
     try {
       const token = localStorage.getItem('potato_token');
-      const res = await fetch(`http://localhost:3000/api/databases/${id}/export`, {
+      const res = await fetch(`${API_BASE}/databases/${id}/export`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) {
@@ -204,7 +204,7 @@ export default function DatabasesPage() {
       const formData = new FormData();
       formData.append('file', file);
       const token = localStorage.getItem('potato_token');
-      const res = await fetch(`http://localhost:3000/api/databases/${activeImportDbId}/import`, {
+      const res = await fetch(`${API_BASE}/databases/${activeImportDbId}/import`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
@@ -268,7 +268,7 @@ export default function DatabasesPage() {
   const handleDownloadBackup = async (id: number, filename: string) => {
     try {
       const token = localStorage.getItem('potato_token');
-      const res = await fetch(`http://localhost:3000/api/databases/${id}/backups/${filename}`, {
+      const res = await fetch(`${API_BASE}/databases/${id}/backups/${filename}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Tải file thất bại");
