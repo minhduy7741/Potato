@@ -124,9 +124,8 @@ export function ProjectOverview({ project, canEdit = true }: ProjectOverviewProp
             {project.hostPort && (
               <InfoRow
                 icon={<ExternalLink className="h-4 w-4" />}
-                label="Local Port"
-                value={`localhost:${project.hostPort}`}
-                link
+                label="Cổng nội bộ"
+                value={project.hostPort.toString()}
                 copyable
               />
             )}
