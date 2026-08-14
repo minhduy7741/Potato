@@ -7,7 +7,8 @@
  *   - Throws an error with the backend's message if the response is not OK
  */
 
-export const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001') + '/api';
+export const WS_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001';
+export const API_BASE = WS_BASE + '/api';
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
