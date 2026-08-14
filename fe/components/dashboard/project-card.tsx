@@ -11,7 +11,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { AreaChart, Area, ResponsiveContainer, YAxis, XAxis, CartesianGrid } from "recharts"
 import { io, Socket } from "socket.io-client"
 import { toast } from "sonner"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, WS_BASE } from "@/lib/api"
 
 export type ProjectStatus = "running" | "stopped" | "sprouting" | "hibernated"
 
@@ -95,7 +95,7 @@ export function ProjectCard({
   // Kết nối WebSocket để lấy stats thời gian thực
   useEffect(() => {
     if (status === "running") {
-      const socket = io("http://localhost:3000/stats")
+      const socket = io(`${WS_BASE}/stats`)
       socketRef.current = socket
 
       socket.on("connect", () => {

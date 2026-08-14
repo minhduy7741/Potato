@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, API_BASE } from "@/lib/api"
 
 interface DeploymentLogEntry {
   id: number
@@ -257,14 +257,14 @@ export function GitDeploy({ project, onUpdate }: GitDeployProps) {
                 <div className="flex gap-2">
                   <Input
                     readOnly
-                    value={`http://127.0.0.1:3000/api/projects/${project.id}/webhook?token=${webhookSecret}`}
+                    value={`${API_BASE}/projects/${project.id}/webhook?token=${webhookSecret}`}
                     className="bg-muted/50 border-border font-mono text-xs flex-1"
                   />
                   <Button
                     variant="outline"
                     className="border-border hover:bg-muted shrink-0"
                     onClick={() => {
-                      navigator.clipboard.writeText(`http://127.0.0.1:3000/api/projects/${project.id}/webhook?token=${webhookSecret}`)
+                      navigator.clipboard.writeText(`${API_BASE}/projects/${project.id}/webhook?token=${webhookSecret}`)
                       toast.success("Đã copy Webhook URL")
                     }}
                   >

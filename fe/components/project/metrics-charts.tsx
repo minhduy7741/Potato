@@ -15,7 +15,7 @@ import {
   AreaChart,
 } from "recharts"
 import { io, Socket } from "socket.io-client"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, WS_BASE } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface MetricCardProps {
@@ -62,7 +62,7 @@ export function MetricsCharts({ projectId }: MetricsChartsProps) {
 
   // Live stats via WebSocket
   useEffect(() => {
-    const socket = io("http://localhost:3000/stats")
+    const socket = io(`${WS_BASE}/stats`)
     socketRef.current = socket
 
     socket.on("connect", () => {

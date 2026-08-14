@@ -36,7 +36,7 @@ export function TerminalLogs({ projectId, projectName }: TerminalLogsProps) {
 
   useEffect(() => {
     console.log(`Connecting to logs socket for project ${projectId}...`)
-    const socket = io("http://localhost:3000/logs", {
+    const socket = io(`${WS_BASE}/logs`, {
       transports: ["websocket", "polling"],
       reconnectionAttempts: 5,
     })
