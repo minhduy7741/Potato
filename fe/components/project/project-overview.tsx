@@ -86,12 +86,8 @@ export function ProjectOverview({ project, canEdit = true }: ProjectOverviewProp
   const [loadingDeployments, setLoadingDeployments] = useState(true)
   const [activities, setActivities] = useState<any[]>([])
   const [loadingActivities, setLoadingActivities] = useState(true)
-  const [isLocalhost, setIsLocalhost] = useState(false)
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsLocalhost(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    }
     // Fetch deployments
     apiFetch(`/projects/${project.id}/deployments`)
       .then((data) => setDeployments(data || []))
@@ -128,9 +124,9 @@ export function ProjectOverview({ project, canEdit = true }: ProjectOverviewProp
             {project.hostPort && (
               <InfoRow
                 icon={<ExternalLink className="h-4 w-4" />}
-                label={isLocalhost ? "Truy cập Trực tiếp (Local)" : "Cổng nội bộ"}
-                value={isLocalhost ? `localhost:${project.hostPort}` : project.hostPort.toString()}
-                link={isLocalhost}
+                label="Truy cập trực tiếp (Bypass Proxy)"
+                value={typeof window !== 'undefined' ? `${window.location.hostname}:${project.hostPort}` : `localhost:${project.hostPort}`}
+                link
                 copyable
               />
             )}

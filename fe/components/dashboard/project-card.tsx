@@ -313,7 +313,7 @@ export function ProjectCard({
               className="h-8 text-primary hover:text-primary hover:bg-primary/10 text-xs font-medium"
               asChild
             >
-              <Link href={hostPort ? `http://localhost:${hostPort}` : `http://${subdomain}.${BASE_DOMAIN}`} target="_blank">
+              <Link href={customDomain ? `http://${customDomain}` : `http://${subdomain}.${BASE_DOMAIN}`} target="_blank">
                 Visit
                 <ExternalLink className="ml-1 h-3 w-3" />
               </Link>
