@@ -9,6 +9,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { CodeBlock } from "@/components/ui/code-block"
+import { BASE_DOMAIN } from "@/lib/api"
 
 const docSections = [
   {
@@ -30,7 +32,7 @@ const docSections = [
     articles: [
       { title: "Cấu hình Custom Domain", desc: "Kết nối tên miền riêng với dự án của bạn" },
       { title: "Cấu hình DNS & CNAME Record", desc: "Thêm bản ghi DNS vào nhà cung cấp tên miền" },
-      { title: "Wildcard Subdomains", desc: "Sử dụng subdomain tự động *.potato.local" },
+      { title: "Wildcard Subdomains", desc: `Sử dụng subdomain tự động *.${BASE_DOMAIN}` },
     ]
   },
   {

@@ -9,6 +9,7 @@
 
 export const WS_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001';
 export const API_BASE = WS_BASE + '/api';
+export const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'potato.local';
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;

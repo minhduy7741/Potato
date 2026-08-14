@@ -31,10 +31,10 @@ export class NginxService {
     sslActive: boolean = false,
     targetPort: string = '80'
   ): string {
+    const baseDomain = process.env.BASE_DOMAIN || 'potato.local';
     const serverName = customDomain 
-
-      ? `${subdomain}.potato.local ${customDomain}` 
-      : `${subdomain}.potato.local`;
+      ? `${subdomain}.${baseDomain} ${customDomain}` 
+      : `${subdomain}.${baseDomain}`;
 
     let config = '';
 

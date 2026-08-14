@@ -49,7 +49,8 @@ export class SslService {
 
     for (const project of expiringProjects) {
       try {
-        const domain = project.customDomain || `${project.subdomain}.potato.local`;
+        const baseDomain = process.env.BASE_DOMAIN || 'potato.local';
+      const domain = project.customDomain || `${project.subdomain}.${baseDomain}`;
         const { expiry } = await this.issueCertificate(domain);
         
         await this.prisma.project.update({

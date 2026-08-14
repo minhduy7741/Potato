@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, BASE_DOMAIN } from "@/lib/api"
 import { motion, AnimatePresence } from "framer-motion"
 
 export function DashboardHeader() {
@@ -176,7 +176,7 @@ export function DashboardHeader() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{p.name}</p>
-                            <p className="text-[10px] text-muted-foreground font-mono">{p.subdomain}.potato.local</p>
+                            <p className="text-[10px] text-muted-foreground font-mono">{p.subdomain}.{BASE_DOMAIN}</p>
                           </div>
                           <Badge variant="outline" className={`text-[9px] shrink-0 ${p.status === "running" ? "text-emerald-400 border-emerald-500/30" : "text-muted-foreground"}`}>
                             {p.status}

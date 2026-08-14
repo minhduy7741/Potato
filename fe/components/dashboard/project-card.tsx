@@ -11,7 +11,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { AreaChart, Area, ResponsiveContainer, YAxis, XAxis, CartesianGrid } from "recharts"
 import { io, Socket } from "socket.io-client"
 import { toast } from "sonner"
-import { apiFetch, WS_BASE } from "@/lib/api"
+import { apiFetch, WS_BASE, BASE_DOMAIN } from "@/lib/api"
 
 export type ProjectStatus = "running" | "stopped" | "sprouting" | "hibernated"
 
@@ -175,7 +175,7 @@ export function ProjectCard({
                   {name}
                 </CardTitle>
                 <p className="text-[10px] text-muted-foreground font-mono">
-                  {subdomain}.potato.local
+                  {subdomain}.{BASE_DOMAIN}
                 </p>
               </div>
             </Link>
@@ -313,7 +313,7 @@ export function ProjectCard({
               className="h-8 text-primary hover:text-primary hover:bg-primary/10 text-xs font-medium"
               asChild
             >
-              <Link href={hostPort ? `http://localhost:${hostPort}` : `http://${subdomain}.potato.local`} target="_blank">
+              <Link href={hostPort ? `http://localhost:${hostPort}` : `http://${subdomain}.${BASE_DOMAIN}`} target="_blank">
                 Visit
                 <ExternalLink className="ml-1 h-3 w-3" />
               </Link>

@@ -112,11 +112,12 @@ export class ProjectsService {
       this.logger.error(`Background provisioning failed for project ${project.id}: ${err.message}`);
     });
 
+    const baseDomain = process.env.BASE_DOMAIN || 'potato.local';
     return {
       ...project,
       port: hostPort,
       url: `http://localhost:${hostPort}`,
-      proxyUrl: `http://${subdomain}.potato.local`,
+      proxyUrl: `http://${subdomain}.${baseDomain}`,
     };
   }
 
@@ -413,7 +414,8 @@ export class ProjectsService {
     const project = await this.findProjectOrFail(id);
 
     // Chỉ cấp SSL cho các domain hợp lệ
-    const domain = project.customDomain || `${project.subdomain}.potato.local`;
+    const baseDomain = process.env.BASE_DOMAIN || 'potato.local';
+    const domain = project.customDomain || `${project.subdomain}.${baseDomain}`;
 
     await this.prisma.project.update({
       where: { id },
@@ -874,7 +876,8 @@ export class ProjectsService {
 
   async activateSsl(projectId: number) {
     const project = await this.findProjectOrFail(projectId);
-    const domain = project.customDomain || `${project.subdomain}.potato.local`;
+    const baseDomain = process.env.BASE_DOMAIN || 'potato.local';
+    const domain = project.customDomain || `${project.subdomain}.${baseDomain}`;
 
     try {
       const { expiry } = await this.sslService.issueCertificate(domain);

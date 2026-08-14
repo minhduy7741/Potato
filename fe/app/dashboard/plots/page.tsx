@@ -10,7 +10,7 @@ import { ProjectCard } from "@/components/dashboard/project-card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { CreateProjectModal } from "@/components/dashboard/create-project-modal"
 import { toast } from "sonner"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, BASE_DOMAIN } from "@/lib/api"
 import Link from "next/link"
 
 export default function PlotsPage() {
@@ -165,7 +165,7 @@ export default function PlotsPage() {
                       {project.name}
                     </Link>
                     <p className="text-[10px] text-muted-foreground font-mono truncate">
-                      {project.hostPort ? `localhost:${project.hostPort}` : `${project.subdomain}.potato.local`}
+                      {project.hostPort ? `localhost:${project.hostPort}` : `${project.subdomain}.${BASE_DOMAIN}`}
                     </p>
                   </div>
                   <Badge variant="outline" className={`shrink-0 text-[10px] px-2 py-0 ${cfg.cls}`}>{cfg.label}</Badge>
@@ -185,7 +185,7 @@ export default function PlotsPage() {
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/10" asChild title="Visit">
-                      <a href={project.hostPort ? `http://localhost:${project.hostPort}` : `http://${project.subdomain}.potato.local`} target="_blank">
+                      <a href={project.hostPort ? `http://localhost:${project.hostPort}` : `http://${project.subdomain}.${BASE_DOMAIN}`} target="_blank">
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     </Button>

@@ -20,7 +20,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, BASE_DOMAIN } from "@/lib/api"
 
 interface InfoRowProps {
   icon: React.ReactNode
@@ -117,7 +117,7 @@ export function ProjectOverview({ project, canEdit = true }: ProjectOverviewProp
             <InfoRow
               icon={<Globe className="h-4 w-4" />}
               label="Subdomain"
-              value={`${project.subdomain}.potato.local`}
+              value={`${project.subdomain}.${BASE_DOMAIN}`}
               link
               copyable
             />
