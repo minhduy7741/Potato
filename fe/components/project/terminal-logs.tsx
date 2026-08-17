@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { io, Socket } from "socket.io-client"
 import { toast } from "sonner"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, WS_BASE } from "@/lib/api"
 
 interface TerminalLogsProps {
   projectId: number
