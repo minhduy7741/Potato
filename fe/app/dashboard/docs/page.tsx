@@ -249,9 +249,20 @@ export default function DocsPage() {
           <div className="mt-4 space-y-4 text-sm text-foreground">
             {selectedArticle?.content === 'dockerfile_guide' && (
               <>
-                <p>Do Potato PaaS hiện tại không dùng tính năng tự nhận diện ngôn ngữ, bạn cần cung cấp một tệp <code>Dockerfile</code> ở thư mục gốc của dự án để hệ thống có thể build và chạy ứng dụng của bạn.</p>
+                <p><strong>Tin vui:</strong> Potato PaaS được trang bị hệ thống <strong>Auto-Language Detection siêu thông minh!</strong> Bạn KHÔNG BẮT BUỘC phải tự viết Dockerfile. Hệ thống sẽ tự quét mã nguồn của bạn và sinh ra Dockerfile chuẩn nhất:</p>
+                <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
+                  <li>Thấy <code>package.json</code> ➔ Tự sinh Dockerfile Node.js (nhận diện cả npm, yarn, pnpm, bun).</li>
+                  <li>Thấy <code>composer.json</code> ➔ Tự sinh Dockerfile PHP/Laravel kèm Apache và PDO.</li>
+                  <li>Thấy <code>requirements.txt</code> ➔ Tự sinh Dockerfile Python.</li>
+                  <li>Không thấy gì cả ➔ Tự sinh Dockerfile Static HTML (Nginx).</li>
+                </ul>
                 
-                <Tabs defaultValue="nodejs" className="w-full mt-6">
+                <p className="mt-4 text-emerald-400 font-medium">✨ Tính năng cứu hộ (Auto-Fallback): Nếu bạn tự viết Dockerfile mà lỡ viết sai (build lỗi), Potato sẽ tự động xóa Dockerfile lỗi đó đi và dùng cấu hình tự động để "cứu vãn" quá trình Deploy của bạn!</p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-2 text-foreground">Chỉ viết Dockerfile khi bạn muốn tùy chỉnh sâu</h3>
+                <p className="mb-2">Nếu bạn dùng ngôn ngữ khác (ví dụ: Go) hoặc muốn cấu hình môi trường đặc thù, đây là các mẫu tham khảo:</p>
+                
+                <Tabs defaultValue="nodejs" className="w-full mt-4">
                   <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-lg">
                     <TabsTrigger value="nodejs" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Node.js</TabsTrigger>
                     <TabsTrigger value="python" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Python</TabsTrigger>
