@@ -939,6 +939,25 @@ export class ProjectsService {
   async deployFromGit(projectId: number, gitRepo: string, branch: string = 'main', gitToken?: string) {
     const project = await this.findProjectOrFail(projectId);
 
+    // Validate branch existence before deploying
+    const isCommitHash = /^[a-f0-9]{7,40}$/i.test(branch);
+    if (!isCommitHash) {
+      try {
+        let checkUrl = gitRepo;
+        if (gitToken && checkUrl.startsWith('https://')) {
+          checkUrl = `https://${gitToken}@${checkUrl.substring(8)}`;
+        }
+        const git = simpleGit();
+        const remoteInfo = await git.listRemote(['--heads', checkUrl, branch]);
+        if (!remoteInfo || remoteInfo.trim() === '') {
+          throw new BadRequestException(`Nhánh '${branch}' không tồn tại trên Kho lưu trữ (Repository) này. Vui lòng kiểm tra lại tên nhánh!`);
+        }
+      } catch (err: any) {
+        if (err instanceof BadRequestException) throw err;
+        this.logger.warn(`Could not validate branch existence for ${gitRepo} (Branch: ${branch}): ${err.message}`);
+      }
+    }
+
     // Lưu cài đặt Git vào dự án
     await this.prisma.project.update({
       where: { id: projectId },
