@@ -918,14 +918,13 @@ export class ProjectsService {
     });
 
     // Tạo lại cấu hình Nginx với domain mới
-    const config = this.nginxService.generateProxyConfig(
+    this.nginxService.generateProxyConfig(
       project.subdomain,
       project.hostPort || 10000,
       project.name,
       updatedCustomDomain || undefined,
       project.sslStatus === 'active',
     );
-    this.nginxService.saveProxyConfig(project.subdomain, config);
 
     await this.logActivity(projectId, 'UPDATE_DOMAIN', `Custom domain updated to: ${customDomain || 'none'}`);
     return updated;
