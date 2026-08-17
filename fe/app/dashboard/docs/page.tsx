@@ -259,77 +259,20 @@ export default function DocsPage() {
                 
                 <p className="mt-4 text-emerald-400 font-medium">✨ Tính năng cứu hộ (Auto-Fallback): Nếu bạn tự viết Dockerfile mà lỡ viết sai (build lỗi), Potato sẽ tự động xóa Dockerfile lỗi đó đi và dùng cấu hình tự động để "cứu vãn" quá trình Deploy của bạn!</p>
 
-                <h3 className="text-lg font-semibold mt-6 mb-2 text-foreground">Chỉ viết Dockerfile khi bạn muốn tùy chỉnh sâu</h3>
-                <p className="mb-2">Nếu bạn dùng ngôn ngữ khác (ví dụ: Go) hoặc muốn cấu hình môi trường đặc thù, đây là các mẫu tham khảo:</p>
+                <h3 className="text-lg font-semibold mt-6 mb-2 text-foreground">Mẫu Dockerfile cho các ngôn ngữ chưa hỗ trợ tự động</h3>
+                <p className="mb-2 text-muted-foreground">Bạn chỉ cần tự viết <code>Dockerfile</code> khi sử dụng các ngôn ngữ dưới đây. Hãy copy mẫu tương ứng và đặt ở thư mục gốc của dự án:</p>
                 
-                <Tabs defaultValue="nodejs" className="w-full mt-4">
+                <Tabs defaultValue="go" className="w-full mt-4">
                   <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-lg">
-                    <TabsTrigger value="nodejs" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Node.js</TabsTrigger>
-                    <TabsTrigger value="python" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Python</TabsTrigger>
-                    <TabsTrigger value="php" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">PHP</TabsTrigger>
                     <TabsTrigger value="go" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Go</TabsTrigger>
+                    <TabsTrigger value="rust" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Rust</TabsTrigger>
+                    <TabsTrigger value="java" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Java (Spring)</TabsTrigger>
+                    <TabsTrigger value="ruby" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Ruby</TabsTrigger>
                   </TabsList>
-
-                  <TabsContent value="nodejs" className="mt-4">
-                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
-                      <code className="text-foreground">{`# Sử dụng Node.js bản mỏng nhẹ
-FROM node:20-alpine
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
-COPY . .
-
-# Phơi bày cổng mạng (Potato tự tìm cổng trống map vào cổng này)
-EXPOSE 3000
-
-# Lệnh khởi chạy ứng dụng
-CMD ["npm", "start"]`}</code>
-                    </pre>
-                  </TabsContent>
-
-                  <TabsContent value="python" className="mt-4">
-                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
-                      <code className="text-foreground">{`# Sử dụng Python bản mỏng nhẹ
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-
-# Phơi bày cổng mạng (Ví dụ Flask/FastAPI/Django)
-EXPOSE 8000
-
-# Lệnh khởi chạy ứng dụng (Ví dụ cho Gunicorn + FastAPI)
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "main:app"]`}</code>
-                    </pre>
-                  </TabsContent>
-
-                  <TabsContent value="php" className="mt-4">
-                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
-                      <code className="text-foreground">{`# Sử dụng PHP Apache
-FROM php:8.2-apache
-
-# Bật mod_rewrite cho Laravel/Symfony
-RUN a2enmod rewrite
-
-# Cài đặt extension cần thiết (Ví dụ pdo_mysql)
-RUN docker-php-ext-install pdo pdo_mysql
-
-WORKDIR /var/www/html
-COPY . .
-
-# Cấp quyền cho thư mục storage (Nếu là Laravel)
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache || true
-
-EXPOSE 80`}</code>
-                    </pre>
-                  </TabsContent>
 
                   <TabsContent value="go" className="mt-4">
                     <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
-                      <code className="text-foreground">{`# Build stage
+                      <code className="text-foreground">{`# Bước 1: Build file nhị phân (Binary)
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -337,13 +280,74 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
-# Run stage (Cực nhẹ)
+# Bước 2: Chạy ứng dụng trên môi trường siêu nhẹ (chỉ ~5MB)
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/main .
 
 EXPOSE 8080
 CMD ["./main"]`}</code>
+                    </pre>
+                  </TabsContent>
+
+                  <TabsContent value="rust" className="mt-4">
+                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
+                      <code className="text-foreground">{`# Bước 1: Build ứng dụng
+FROM rust:1.75-slim AS builder
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+COPY src src
+RUN cargo build --release
+
+# Bước 2: Chạy ứng dụng (Môi trường Debian)
+FROM debian:bookworm-slim
+WORKDIR /app
+# Thay 'my-rust-app' bằng tên project trong Cargo.toml
+COPY --from=builder /app/target/release/my-rust-app /app/my-rust-app
+
+EXPOSE 8000
+CMD ["./my-rust-app"]`}</code>
+                    </pre>
+                  </TabsContent>
+
+                  <TabsContent value="java" className="mt-4">
+                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
+                      <code className="text-foreground">{`# Sử dụng Maven để build
+FROM maven:3.9-eclipse-temurin-17-alpine AS builder
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# Chạy ứng dụng Java
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
+
+EXPOSE 8080
+CMD ["java", "-jar", "app.jar"]`}</code>
+                    </pre>
+                  </TabsContent>
+
+                  <TabsContent value="ruby" className="mt-4">
+                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
+                      <code className="text-foreground">{`# Sử dụng Ruby bản mỏng nhẹ
+FROM ruby:3.2-slim
+
+# Cài đặt thư viện hệ thống cần thiết cho Rails/Nokogiri
+RUN apt-get update -qq && apt-get install -y build-essential libpq-dev
+
+WORKDIR /app
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+COPY . .
+
+# Phơi bày cổng mạng (Mặc định của Rails)
+EXPOSE 3000
+
+# Khởi chạy server Puma
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]`}</code>
                     </pre>
                   </TabsContent>
                 </Tabs>
