@@ -20,6 +20,7 @@ interface ProjectCardProps {
   name: string
   status: string
   subdomain: string
+  customDomain?: string
   hostPort?: number
   index?: number
   onUpdate: () => void
@@ -49,6 +50,7 @@ export function ProjectCard({
   name,
   status: initialStatus,
   subdomain,
+  customDomain,
   hostPort,
   index = 0,
   onUpdate,
