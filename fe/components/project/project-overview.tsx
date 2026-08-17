@@ -116,8 +116,8 @@ export function ProjectOverview({ project, canEdit = true }: ProjectOverviewProp
           <CardContent className="pt-0">
             <InfoRow
               icon={<Globe className="h-4 w-4" />}
-              label="Subdomain"
-              value={`${project.subdomain}.${BASE_DOMAIN}`}
+              label={project.customDomain ? "Domain" : "Subdomain"}
+              value={project.customDomain || `${project.subdomain}.${BASE_DOMAIN}`}
               link
               copyable
             />
