@@ -58,6 +58,20 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
   const [isEditingDomain, setIsEditingDomain] = useState(false)
   const [isSavingDomain, setIsSavingDomain] = useState(false)
   const [isEnablingSsl, setIsEnablingSsl] = useState(false)
+  const [isDisablingSsl, setIsDisablingSsl] = useState(false)
+
+  const handleDisableSsl = async () => {
+    setIsDisablingSsl(true)
+    try {
+      await apiFetch(`/projects/${project.id}/ssl/deactivate`, { method: "PATCH" })
+      toast.success("Đã tắt bảo mật SSL (Chuyển về HTTP)")
+      onUpdate?.()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsDisablingSsl(false)
+    }
+  }
 
   const handleEnableSsl = async () => {
     setIsEnablingSsl(true)
@@ -460,20 +474,31 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
 
               {isSslActive ? (
                 <div className={`rounded-xl border p-4 ${isExpiring ? 'border-amber-500/30 bg-amber-500/5' : 'border-emerald-500/30 bg-emerald-500/5'}`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`flex h-6 w-6 items-center justify-center rounded-full ${isExpiring ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                      {isExpiring ? <AlertTriangle className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full ${isExpiring ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                        {isExpiring ? <AlertTriangle className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {isExpiring ? 'Chứng chỉ sắp hết hạn' : 'Đã kích hoạt bảo mật SSL'}
+                        </p>
+                        <p className="text-xs text-muted-foreground whitespace-pre-line">
+                          {isExpiring
+                            ? `Chứng chỉ của bạn sẽ hết hạn vào ${new Date(project.sslExpiry).toLocaleDateString()}. Vui lòng gia hạn.`
+                            : `Sử dụng HTTPS (TLS 1.3) và Force Redirect từ HTTP.`}
+                        </p>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {isExpiring ? 'Chứng chỉ sắp hết hạn' : 'Đã kích hoạt bảo mật SSL'}
-                      </p>
-                      <p className="text-xs text-muted-foreground whitespace-pre-line">
-                        {isExpiring
-                          ? `Chứng chỉ của bạn sẽ hết hạn vào ${new Date(project.sslExpiry).toLocaleDateString()}. Vui lòng gia hạn.`
-                          : `Sử dụng HTTPS (TLS 1.3) và Force Redirect từ HTTP.`}
-                      </p>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-500/30 text-red-400 hover:bg-red-500/10 ml-4"
+                      onClick={handleDisableSsl}
+                      disabled={isDisablingSsl}
+                    >
+                      {isDisablingSsl ? <Loader2 className="h-3 w-3 animate-spin" /> : "Tắt SSL"}
+                    </Button>
                   </div>
                 </div>
               ) : (

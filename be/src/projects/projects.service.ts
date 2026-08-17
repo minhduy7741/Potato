@@ -907,6 +907,35 @@ export class ProjectsService {
     }
   }
 
+  async deactivateSsl(projectId: number) {
+    const project = await this.findProjectOrFail(projectId);
+
+    try {
+      const updated = await this.prisma.project.update({
+        where: { id: projectId },
+        data: {
+          sslStatus: 'inactive',
+          sslExpiry: null,
+        },
+      });
+
+      // Tạo lại cấu hình Nginx KHÔNG dùng SSL (HTTP)
+      this.nginxService.generateProxyConfig(
+        project.subdomain,
+        project.hostPort || 10000,
+        project.name,
+        project.customDomain || undefined,
+        false, // Tắt SSL
+      );
+
+      await this.logActivity(projectId, 'DEACTIVATE_SSL', `SSL deactivated`);
+      return updated;
+    } catch (error) {
+      this.logger.error(`Failed to deactivate SSL for project ${projectId}: ${error.message}`);
+      throw error;
+    }
+  }
+
   async updateCustomDomain(projectId: number, customDomain: string | null) {
     const project = await this.findProjectOrFail(projectId);
 

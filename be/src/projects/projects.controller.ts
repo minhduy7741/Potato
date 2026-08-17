@@ -228,6 +228,13 @@ export class ProjectsController {
     return this.projectsService.activateSsl(id);
   }
 
+  @Patch(':id/ssl/deactivate')
+  @RequirePermission('project:settings')
+  async deactivateSsl(@Param('id', ParseIntPipe) id: number) {
+    this.logger.log(`PATCH /projects/${id}/ssl/deactivate`);
+    return this.projectsService.deactivateSsl(id);
+  }
+
   @Patch(':id/domain')
   @RequirePermission('project:settings')
   async updateDomain(
