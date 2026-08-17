@@ -75,6 +75,11 @@ export function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
   const handleSaveDomain = async () => {
     setIsSavingDomain(true)
     try {
+      if (customDomain && !/^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i.test(customDomain)) {
+        toast.error("Tên miền không hợp lệ. Phải có định dạng chuẩn như: myapp.com, example.vn");
+        return;
+      }
+      
       await apiFetch(`/projects/${project.id}/domain`, {
         method: "PATCH",
         body: JSON.stringify({ customDomain }),
