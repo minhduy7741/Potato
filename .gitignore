@@ -16,3 +16,7 @@ be/nginx_configs/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Ignore sample projects
+moneymap/
+demo/

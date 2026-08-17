@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { CodeBlock } from "@/components/ui/code-block"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BASE_DOMAIN } from "@/lib/api"
 
 const docSections = [
@@ -20,6 +22,7 @@ const docSections = [
     bg: "bg-yellow-500/10 border-yellow-500/20",
     articles: [
       { title: "Tạo dự án đầu tiên (Plot)", desc: "Hướng dẫn từng bước khởi tạo container đầu tiên", badge: "Mới bắt đầu" },
+      { title: "Hướng dẫn viết Dockerfile chuẩn", desc: "Cách viết Dockerfile chuẩn cho các dự án trên Potato PaaS", content: "dockerfile_guide" },
       { title: "Kết nối Database (Sprout)", desc: "Thêm PostgreSQL, MySQL, MongoDB, Redis vào dự án" },
       { title: "Deploy ứng dụng Node.js", desc: "Cách đóng gói và triển khai ứng dụng Node.js" },
     ]
@@ -90,6 +93,7 @@ const badgeColors: Record<string, string> = {
 export default function DocsPage() {
   const [search, setSearch] = useState("")
   const [toast, setToast] = useState<{ title: string } | null>(null)
+  const [selectedArticle, setSelectedArticle] = useState<{ title: string, content?: string } | null>(null)
 
   const showToast = useCallback((title: string) => {
     setToast({ title })
@@ -162,10 +166,10 @@ export default function DocsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-1">
-                {section.articles.map((article) => (
+                {section.articles.map((article: any) => (
                   <button
                     key={article.title}
-                    onClick={() => showToast(article.title)}
+                    onClick={() => article.content ? setSelectedArticle(article) : showToast(article.title)}
                     className="w-full text-left rounded-lg p-3 hover:bg-white/5 transition-colors group"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -235,6 +239,118 @@ export default function DocsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Article Dialog */}
+      <Dialog open={!!selectedArticle} onOpenChange={(open) => !open && setSelectedArticle(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-primary">{selectedArticle?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-4 text-sm text-foreground">
+            {selectedArticle?.content === 'dockerfile_guide' && (
+              <>
+                <p>Do Potato PaaS hiện tại không dùng tính năng tự nhận diện ngôn ngữ, bạn cần cung cấp một tệp <code>Dockerfile</code> ở thư mục gốc của dự án để hệ thống có thể build và chạy ứng dụng của bạn.</p>
+                
+                <Tabs defaultValue="nodejs" className="w-full mt-6">
+                  <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-lg">
+                    <TabsTrigger value="nodejs" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Node.js</TabsTrigger>
+                    <TabsTrigger value="python" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Python</TabsTrigger>
+                    <TabsTrigger value="php" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">PHP</TabsTrigger>
+                    <TabsTrigger value="go" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Go</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="nodejs" className="mt-4">
+                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
+                      <code className="text-foreground">{`# Sử dụng Node.js bản mỏng nhẹ
+FROM node:20-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --production
+COPY . .
+
+# Phơi bày cổng mạng (Potato tự tìm cổng trống map vào cổng này)
+EXPOSE 3000
+
+# Lệnh khởi chạy ứng dụng
+CMD ["npm", "start"]`}</code>
+                    </pre>
+                  </TabsContent>
+
+                  <TabsContent value="python" className="mt-4">
+                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
+                      <code className="text-foreground">{`# Sử dụng Python bản mỏng nhẹ
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+
+# Phơi bày cổng mạng (Ví dụ Flask/FastAPI/Django)
+EXPOSE 8000
+
+# Lệnh khởi chạy ứng dụng (Ví dụ cho Gunicorn + FastAPI)
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "main:app"]`}</code>
+                    </pre>
+                  </TabsContent>
+
+                  <TabsContent value="php" className="mt-4">
+                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
+                      <code className="text-foreground">{`# Sử dụng PHP Apache
+FROM php:8.2-apache
+
+# Bật mod_rewrite cho Laravel/Symfony
+RUN a2enmod rewrite
+
+# Cài đặt extension cần thiết (Ví dụ pdo_mysql)
+RUN docker-php-ext-install pdo pdo_mysql
+
+WORKDIR /var/www/html
+COPY . .
+
+# Cấp quyền cho thư mục storage (Nếu là Laravel)
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache || true
+
+EXPOSE 80`}</code>
+                    </pre>
+                  </TabsContent>
+
+                  <TabsContent value="go" className="mt-4">
+                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs border border-border">
+                      <code className="text-foreground">{`# Build stage
+FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+
+# Run stage (Cực nhẹ)
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/main .
+
+EXPOSE 8080
+CMD ["./main"]`}</code>
+                    </pre>
+                  </TabsContent>
+                </Tabs>
+                
+                <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg mt-6 flex items-start gap-3">
+                  <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-primary mb-1">Đừng quên file .dockerignore</h4>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Bạn phải luôn tạo thêm file <code>.dockerignore</code> nằm cạnh <code>Dockerfile</code> để loại bỏ các thư mục như <code>node_modules</code>, <code>venv</code>, <code>vendor</code>, và <code>.git</code>. Nếu không, quá trình build sẽ rất chậm và dễ bị lỗi!
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
