@@ -907,12 +907,14 @@ export class ProjectsService {
     }
   }
 
-  async updateCustomDomain(projectId: number, customDomain: string) {
+  async updateCustomDomain(projectId: number, customDomain: string | null) {
     const project = await this.findProjectOrFail(projectId);
+
+    const updatedCustomDomain = customDomain && customDomain.trim() !== '' ? customDomain.trim() : null;
 
     const updated = await this.prisma.project.update({
       where: { id: projectId },
-      data: { customDomain },
+      data: { customDomain: updatedCustomDomain },
     });
 
     // Tạo lại cấu hình Nginx với domain mới
@@ -920,7 +922,7 @@ export class ProjectsService {
       project.subdomain,
       project.hostPort || 10000,
       project.name,
-      customDomain || undefined,
+      updatedCustomDomain || undefined,
       project.sslStatus === 'active',
     );
     this.nginxService.saveProxyConfig(project.subdomain, config);
