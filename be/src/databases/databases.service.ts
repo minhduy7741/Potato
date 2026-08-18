@@ -224,6 +224,7 @@ export class DatabasesService {
         Image: image,
         name: containerName,
         HostConfig: {
+          LogConfig: { Type: 'json-file', Config: { 'max-size': '10m', 'max-file': '3' } },
           PortBindings: { [`${internalPort}/tcp`]: [{ HostPort: hostPort.toString() }] },
           RestartPolicy: { Name: 'always' },
         },

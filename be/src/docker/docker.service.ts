@@ -371,4 +371,12 @@ export class DockerService {
   async pruneImages(): Promise<any> {
     return this.docker.pruneImages();
   }
+
+  async pruneBuilderCache(): Promise<void> {
+    try {
+      const { exec } = require('child_process');
+      // Keep only last 7 days of build cache to save SSD
+      exec('docker builder prune -a -f --filter "until=168h"');
+    } catch (e) {}
+  }
 }

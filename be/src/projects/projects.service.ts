@@ -159,6 +159,7 @@ export class ProjectsService {
         ],
         ExposedPorts: { '3000/tcp': {} },
         HostConfig: {
+          LogConfig: { Type: 'json-file', Config: { 'max-size': '10m', 'max-file': '3' } },
           NanoCPUs: Math.floor(DEFAULT_CPU_LIMIT * 1000000000),
           Memory: DEFAULT_RAM_LIMIT * 1024 * 1024,
           MemorySwap: DEFAULT_RAM_LIMIT * 1024 * 1024,
@@ -1000,6 +1001,22 @@ export class ProjectsService {
       data: { projectId, status: 'running', trigger: 'manual' },
     });
 
+    // --- BẮT ĐẦU DỌN RÁC: Giữ lại tối đa 20 log gần nhất ---
+    try {
+      const oldLogs = await this.prisma.deploymentLog.findMany({
+        where: { projectId },
+        orderBy: { createdAt: 'desc' },
+        skip: 20,
+        select: { id: true }
+      });
+      if (oldLogs.length > 0) {
+        await this.prisma.deploymentLog.deleteMany({
+          where: { id: { in: oldLogs.map(l => l.id) } }
+        });
+      }
+    } catch (e) {}
+    // --- KẾT THÚC DỌN RÁC ---
+
     // Khởi chạy tiến trình Deploy ngầm
     this.runGitDeployBackground(project, deployment.id, gitRepo, branch).catch(err => {
       this.logger.error(`Git deploy failed for project ${projectId}: ${err.message}`);
@@ -1401,6 +1418,7 @@ EXPOSE 80
         Env: envArray,
         ExposedPorts: { [`${targetPort}/tcp`]: {} },
         HostConfig: {
+          LogConfig: { Type: 'json-file', Config: { 'max-size': '10m', 'max-file': '3' } },
           // ĐÂY LÀ ĐOẠN CODE SET GIỚI HẠN CỨNG TÀI NGUYÊN (HARD LIMIT) CHO TỪNG WEB
           // Truyền thông số Memory và CPU thẳng vào lõi Docker Engine. 
           // Nhờ cái này, mỗi web chạy trong "chuồng" riêng, dù bị lỗi tràn RAM thì Docker sẽ tự động 
@@ -1492,6 +1510,7 @@ EXPOSE 80
           }
           // Xóa các layer build thừa (dangling layers)
           await this.dockerService.pruneImages();
+          await this.dockerService.pruneBuilderCache();
         } catch (imgCleanupErr: any) {
           this.logger.warn(`Failed to clean up old build images for project ${project.id}: ${imgCleanupErr.message}`);
         }
@@ -1890,6 +1909,22 @@ EXPOSE 80
       }
     });
 
+    // --- BẮT ĐẦU DỌN RÁC: Giữ lại tối đa 20 log gần nhất ---
+    try {
+      const oldLogs = await this.prisma.deploymentLog.findMany({
+        where: { projectId },
+        orderBy: { createdAt: 'desc' },
+        skip: 20,
+        select: { id: true }
+      });
+      if (oldLogs.length > 0) {
+        await this.prisma.deploymentLog.deleteMany({
+          where: { id: { in: oldLogs.map(l => l.id) } }
+        });
+      }
+    } catch (e) {}
+    // --- KẾT THÚC DỌN RÁC ---
+
     this.runRollbackBackground(project, newDeployment.id, rollbackImageName, deployment.gitCommit).catch(err => {
       this.logger.error(`Rollback failed for project ${projectId}: ${err.message}`);
     });
@@ -1970,6 +2005,7 @@ EXPOSE 80
         Env: envArray,
         ExposedPorts: { [`${targetPort}/tcp`]: {} },
         HostConfig: {
+          LogConfig: { Type: 'json-file', Config: { 'max-size': '10m', 'max-file': '3' } },
           Memory: project.ramLimit * 1024 * 1024,
           MemorySwap: project.ramLimit * 1024 * 1024,
           NanoCPUs: Math.floor(project.cpuLimit * 1000000000),
