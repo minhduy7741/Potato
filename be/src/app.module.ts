@@ -10,6 +10,7 @@ import { InfrastructureModule } from './infrastructure/infrastructure.module';
 import { AuthModule } from './auth/auth.module';
 import { DatabasesModule } from './databases/databases.module';
 import { ChatModule } from './chat/chat.module';
+import { SystemModule } from './system/system.module';
 import { APP_PIPE } from '@nestjs/core';
 
 import { ScheduleModule } from '@nestjs/schedule';
@@ -24,7 +25,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     InfrastructureModule, 
     AuthModule,
     DatabasesModule,
-    ChatModule
+    ChatModule,
+    SystemModule
   ],
   controllers: [AppController],
   providers: [AppService],

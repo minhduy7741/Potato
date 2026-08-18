@@ -60,6 +60,13 @@ model User {
   createdAt         DateTime        @default(now())
 }
 
+model SystemConfig {
+  id                  Int      @id @default(1)
+  isChatbotEnabled    Boolean  @default(true)
+  chatbotSystemPrompt String   @db.Text
+  updatedAt           DateTime @updatedAt
+}
+
 model Project {
   id             Int                @id @default(autoincrement())
   name           String
