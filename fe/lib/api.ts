@@ -13,7 +13,7 @@ export const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'potato.local'
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('potato_token');
+  return localStorage.getItem('potato_token') || sessionStorage.getItem('potato_token');
 }
 
 interface ApiOptions extends RequestInit {

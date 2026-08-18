@@ -122,7 +122,7 @@ export default function AccessControlPage() {
 
   // Check auth
   useEffect(() => {
-    const userJson = localStorage.getItem("potato_user")
+    const userJson = (localStorage.getItem("potato_user") || sessionStorage.getItem("potato_user"))
     if (!userJson) { router.push("/login"); return }
     const user = JSON.parse(userJson)
     setCurrentUser(user)

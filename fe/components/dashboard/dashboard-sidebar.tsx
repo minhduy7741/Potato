@@ -71,7 +71,7 @@ export function DashboardSidebar() {
 
   useEffect(() => {
     try {
-      const userJson = localStorage.getItem("potato_user")
+      const userJson = (localStorage.getItem("potato_user") || sessionStorage.getItem("potato_user"))
       if (userJson) {
         const user = JSON.parse(userJson)
         const isSuperAdmin = user?.role === "ADMIN" && user?.email === "superadmin@potato.com"
@@ -191,7 +191,7 @@ export function DashboardSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton 
               onClick={() => {
-                localStorage.removeItem("potato_user");
+                localStorage.removeItem("potato_user"); sessionStorage.removeItem("potato_user");
                 window.location.href = "/login";
               }}
               className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"

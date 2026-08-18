@@ -41,7 +41,7 @@ export default function SettingsPage() {
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
 
   useEffect(() => {
-    const userJson = localStorage.getItem("potato_user")
+    const userJson = (localStorage.getItem("potato_user") || sessionStorage.getItem("potato_user"))
     if (!userJson) { router.push("/login"); return }
     const u = JSON.parse(userJson)
     setUser(u)
@@ -62,7 +62,11 @@ export default function SettingsPage() {
         body: JSON.stringify({ name }),
       })
       const merged = { ...user, ...updatedUser }
-      localStorage.setItem("potato_user", JSON.stringify(merged))
+      if (localStorage.getItem("potato_user")) {
+        localStorage.setItem("potato_user", JSON.stringify(merged))
+      } else {
+        sessionStorage.setItem("potato_user", JSON.stringify(merged))
+      }
       setUser(merged)
       toast.success("Thông tin cá nhân đã được cập nhật!")
     } catch (e: any) {
@@ -99,8 +103,8 @@ export default function SettingsPage() {
       toast.success("Tài khoản của bạn đã được xóa. Tạm biệt! 👋", { id: "delete-acc" })
 
       // Cleanup local state
-      localStorage.removeItem("potato_token")
-      localStorage.removeItem("potato_user")
+      localStorage.removeItem("potato_token"); sessionStorage.removeItem("potato_token")
+      localStorage.removeItem("potato_user"); sessionStorage.removeItem("potato_user")
       router.push("/login")
     } catch (e: any) {
       toast.error(e.message || "Xóa tài khoản thất bại, vui lòng liên hệ hỗ trợ.")

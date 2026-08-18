@@ -37,7 +37,7 @@ export function DashboardHeader() {
   const [notifOpen, setNotifOpen] = useState(false)
 
   useEffect(() => {
-    const userJson = localStorage.getItem("potato_user")
+    const userJson = (localStorage.getItem("potato_user") || sessionStorage.getItem("potato_user"))
     if (userJson) {
       try { setUser(JSON.parse(userJson)) } catch {}
     }
@@ -59,8 +59,8 @@ export function DashboardHeader() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("potato_user")
-    localStorage.removeItem("potato_token")
+    localStorage.removeItem("potato_user"); sessionStorage.removeItem("potato_user")
+    localStorage.removeItem("potato_token"); sessionStorage.removeItem("potato_token")
     router.push("/login")
   }
 

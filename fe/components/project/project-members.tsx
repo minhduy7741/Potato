@@ -63,7 +63,7 @@ export function ProjectMembers({ projectId, projectOwnerId }: ProjectMembersProp
   }, [])
 
   useEffect(() => {
-    const userJson = localStorage.getItem("potato_user")
+    const userJson = (localStorage.getItem("potato_user") || sessionStorage.getItem("potato_user"))
     if (userJson) {
       setCurrentUser(JSON.parse(userJson))
     }

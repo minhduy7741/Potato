@@ -47,7 +47,7 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const userJson = localStorage.getItem("potato_user")
+    const userJson = (localStorage.getItem("potato_user") || sessionStorage.getItem("potato_user"))
     const token = localStorage.getItem("potato_token")
     if (!userJson || !token) {
       router.push("/login")

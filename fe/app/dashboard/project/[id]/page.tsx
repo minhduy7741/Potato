@@ -108,7 +108,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     if (id) fetchProject()
     
-    const userJson = localStorage.getItem("potato_user")
+    const userJson = (localStorage.getItem("potato_user") || sessionStorage.getItem("potato_user"))
     if (userJson) {
       try {
         setCurrentUser(JSON.parse(userJson))

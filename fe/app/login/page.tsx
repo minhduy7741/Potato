@@ -28,6 +28,7 @@ export default function LoginPage() {
     const formData = new FormData(e.currentTarget)
     const email = formData.get("email") as string
     const password = formData.get("password") as string
+    const rememberMe = formData.get("remember") === "on"
 
     try {
       const data = await apiFetch<{ user: any; accessToken: string }>("/auth/login", {
@@ -36,9 +37,21 @@ export default function LoginPage() {
         skipAuth: true,
       })
 
-      // Store both user info and JWT token
-      localStorage.setItem("potato_user", JSON.stringify(data.user))
-      localStorage.setItem("potato_token", data.accessToken)
+      // Always clear previous session storage to prevent conflicts
+      sessionStorage.removeItem("potato_user")
+      sessionStorage.removeItem("potato_token")
+      localStorage.removeItem("potato_user")
+      localStorage.removeItem("potato_token")
+
+      if (rememberMe) {
+        // Store in localStorage (persists after browser closes)
+        localStorage.setItem("potato_user", JSON.stringify(data.user))
+        localStorage.setItem("potato_token", data.accessToken)
+      } else {
+        // Store in sessionStorage (cleared when browser closes)
+        sessionStorage.setItem("potato_user", JSON.stringify(data.user))
+        sessionStorage.setItem("potato_token", data.accessToken)
+      }
 
       router.push("/dashboard")
     } catch (err: any) {
@@ -65,9 +78,15 @@ export default function LoginPage() {
         skipAuth: true,
       })
 
-      // Auto-login: store token and redirect directly to dashboard
-      localStorage.setItem("potato_user", JSON.stringify(data.user))
-      localStorage.setItem("potato_token", data.accessToken)
+      // Always clear previous session storage to prevent conflicts
+      sessionStorage.removeItem("potato_user")
+      sessionStorage.removeItem("potato_token")
+      localStorage.removeItem("potato_user")
+      localStorage.removeItem("potato_token")
+
+      // Auto-login: store token in sessionStorage safely and redirect
+      sessionStorage.setItem("potato_user", JSON.stringify(data.user))
+      sessionStorage.setItem("potato_token", data.accessToken)
 
       setRegisterSuccess(true)
       // Short delay to show success state then redirect
@@ -151,6 +170,10 @@ export default function LoginPage() {
                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input id="password" name="password" type="password" placeholder="••••••••" className="pl-10 bg-background/50" required />
                       </div>
+                    </div>
+                    <div className="flex items-center space-x-2 pt-2">
+                      <input type="checkbox" id="remember" name="remember" defaultChecked className="rounded border-border bg-background h-4 w-4 text-primary focus:ring-primary/50" />
+                      <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground cursor-pointer">Ghi nhớ đăng nhập</Label>
                     </div>
                   </CardContent>
                   <CardFooter>
