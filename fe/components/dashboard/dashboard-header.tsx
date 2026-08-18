@@ -122,12 +122,12 @@ export function DashboardHeader() {
       <SidebarTrigger className="md:hidden" />
 
       {/* Global Search */}
-      <div ref={searchRef} className="relative hidden w-full max-w-sm md:flex">
+      <div ref={searchRef} className="relative flex w-full max-w-[150px] sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none" />
         <Input
           type="search"
-          placeholder="Search plots, sprouts..."
-          className="pl-10 pr-8 bg-muted border-border"
+          placeholder="Search..."
+          className="pl-9 pr-8 h-9 text-sm bg-muted border-border w-full"
           value={searchQuery}
           onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true) }}
           onFocus={() => setShowSearch(true)}
