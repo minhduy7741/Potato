@@ -124,15 +124,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     )
   }
 
-  // RBAC Checks
+  // RBAC Checks (New Granular System)
   const isOwner = project?.userId === currentUser?.id;
   const isGlobalAdmin = currentUser?.role === 'ADMIN';
   const memberRecord = project?.members?.find((m: any) => m.userId === currentUser?.id);
-  const isProjectAdmin = memberRecord?.role === 'ADMIN';
-  const isProjectEditor = memberRecord?.role === 'EDITOR' || isProjectAdmin;
+  const myPermissions = memberRecord?.permissions || project?.memberPermissions || [];
   
-  const canEdit = isOwner || isGlobalAdmin || isProjectEditor;
-  const canManage = isOwner || isGlobalAdmin || isProjectAdmin;
+  // Backward compatibility + Granular checks
+  const canEdit = isOwner || isGlobalAdmin || myPermissions.includes('project:deploy') || myPermissions.includes('project:settings');
+  const canManage = isOwner || isGlobalAdmin || myPermissions.includes('project:settings');
+  
+  // Specific tab permissions
+  const canViewDeploy = isOwner || isGlobalAdmin || myPermissions.includes('project:deploy');
+  const canViewEnv = isOwner || isGlobalAdmin || myPermissions.includes('env:read');
+  const canViewLogs = isOwner || isGlobalAdmin || myPermissions.includes('logs:read');
 
   const statusColors: any = {
     running: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
@@ -267,21 +272,23 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               Tổng quan
             </TabsTrigger>
-            {canEdit && (
+            {canViewDeploy && (
               <TabsTrigger value="deploy" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                 <GitBranch className="mr-1.5 h-3.5 w-3.5" />
-                Triển khai Git
+                Triển khai
               </TabsTrigger>
             )}
-            {canEdit && (
+            {canViewEnv && (
               <TabsTrigger value="env" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                 <Key className="mr-1.5 h-3.5 w-3.5" />
                 Biến môi trường
               </TabsTrigger>
             )}
-            <TabsTrigger value="logs" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              Nhật ký Logs
-            </TabsTrigger>
+            {canViewLogs && (
+              <TabsTrigger value="logs" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                Nhật ký Logs
+              </TabsTrigger>
+            )}
             <TabsTrigger value="metrics" className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               Thông số Metrics
             </TabsTrigger>
@@ -296,29 +303,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <ProjectOverview project={project} canEdit={canEdit} />
           </TabsContent>
 
-          {canEdit && (
+          {canViewDeploy && (
             <TabsContent value="deploy">
               <GitDeploy project={project} onUpdate={fetchProject} />
             </TabsContent>
           )}
 
-          {canEdit && (
+          {canViewEnv && (
             <TabsContent value="env">
               <EnvVariablesManager projectId={project.id} />
             </TabsContent>
           )}
 
-          <TabsContent value="logs">
-            <div className="flex flex-col gap-6">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-1">Build & Runtime Logs</h2>
-                <p className="text-sm text-muted-foreground">
-                  Theo dõi trực tiếp quá trình "sinh trưởng" của ứng dụng từ container Docker.
-                </p>
+          {canViewLogs && (
+            <TabsContent value="logs">
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground mb-1">Build & Runtime Logs</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Theo dõi trực tiếp quá trình "sinh trưởng" của ứng dụng từ container Docker.
+                  </p>
+                </div>
+                <TerminalLogs projectId={project.id} projectName={project.name} />
               </div>
-              <TerminalLogs projectId={project.id} projectName={project.name} />
-            </div>
-          </TabsContent>
+            </TabsContent>
+          )}
 
           <TabsContent value="metrics">
             <div className="flex flex-col gap-6">
