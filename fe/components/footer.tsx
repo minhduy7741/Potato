@@ -7,6 +7,10 @@ const footerLinks = {
     { label: "Tính năng", href: "#features" },
     { label: "Bắt đầu", href: "/login" },
   ],
+  "Tài nguyên": [
+    { label: "Tài liệu", href: "#docs" },
+    { label: "Về chúng tôi", href: "#about" },
+  ],
   "Hỗ trợ": [
     { label: "GitHub", href: "https://github.com/minhduy7741" },
   ]
