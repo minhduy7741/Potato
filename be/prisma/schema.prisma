@@ -53,6 +53,10 @@ model User {
   maxProjects       Int             @default(3)     // Số lượng dự án tối đa cho phép
   maxDatabases      Int             @default(2)     // Số lượng database tối đa cho phép
   
+  // Phục hồi mật khẩu
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  
   createdAt         DateTime        @default(now())
 }
 

@@ -9,6 +9,8 @@ import { JwtStrategy } from './jwt.strategy';
 
 import { ProjectsModule } from '../projects/projects.module';
 
+import { MailService } from '../mail/mail.service';
+
 @Module({
   imports: [
     PrismaModule,
@@ -20,7 +22,7 @@ import { ProjectsModule } from '../projects/projects.module';
     }),
   ],
   controllers: [AuthController, RolesController],
-  providers: [AuthService, JwtStrategy],
-  exports: [JwtModule, JwtStrategy],
+  providers: [AuthService, JwtStrategy, MailService],
+  exports: [JwtModule, JwtStrategy, MailService],
 })
 export class AuthModule {}

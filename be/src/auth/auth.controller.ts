@@ -31,6 +31,25 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body('email') email: string) {
+    if (!email) {
+      return { message: 'Vui lòng cung cấp email.' };
+    }
+    return this.authService.forgotPassword(email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: any) {
+    const { token, newPassword } = body;
+    if (!token || !newPassword) {
+      return { message: 'Thiếu thông tin token hoặc mật khẩu mới.' };
+    }
+    return this.authService.resetPassword(token, newPassword);
+  }
+
   /**
    * GET /api/auth/me — Lấy thông tin hồ sơ của tài khoản đang đăng nhập hiện tại.
    * Lấy ID người dùng từ bên trong cục Token (req.user.id) nên siêu bảo mật.

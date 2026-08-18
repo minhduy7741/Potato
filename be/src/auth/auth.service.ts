@@ -7,6 +7,8 @@ import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 import { ProjectsService } from '../projects/projects.service';
 
+import { MailService } from '../mail/mail.service';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -14,6 +16,7 @@ export class AuthService {
     private jwtService: JwtService,
     @Inject(forwardRef(() => ProjectsService))
     private projectsService: ProjectsService,
+    private mailService: MailService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────
@@ -95,6 +98,64 @@ export class AuthService {
       accessToken,
       message: 'Đăng nhập thành công',
     };
+  }
+
+  // ─── Reset Password ──────────────────────────────────────────────────
+
+  async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Vì lý do bảo mật, không báo lỗi nếu email không tồn tại
+      return { message: 'Nếu email tồn tại, một đường link khôi phục đã được gửi.' };
+    }
+
+    // Tạo token ngẫu nhiên
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date();
+    resetTokenExpiry.setMinutes(resetTokenExpiry.getMinutes() + 15); // Hết hạn sau 15 phút
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: resetTokenExpiry,
+      },
+    });
+
+    await this.mailService.sendPasswordResetEmail(user.email, resetToken);
+
+    return { message: 'Nếu email tồn tại, một đường link khôi phục đã được gửi.' };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Mật khẩu mới phải có ít nhất 6 ký tự');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: { gt: new Date() }, // Kiểm tra còn hạn không
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Mã khôi phục không hợp lệ hoặc đã hết hạn.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    });
+
+    return { message: 'Mật khẩu đã được thay đổi thành công. Bạn có thể đăng nhập bằng mật khẩu mới.' };
   }
 
   // ─── Profile Management ───────────────────────────────────────────────
