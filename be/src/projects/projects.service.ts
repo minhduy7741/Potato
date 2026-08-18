@@ -490,10 +490,19 @@ export class ProjectsService {
       }
     }
 
-    // 2.5 Xóa Docker image nếu nó tồn tại
+    // 2.5 Xóa toàn bộ Docker images của project
     try {
-      const imageName = `potato-app-${projectId}:latest`;
-      await this.dockerService.removeImage(imageName);
+      const images = await this.dockerService.listImages();
+      for (const img of images) {
+        if (img.RepoTags) {
+          for (const tag of img.RepoTags) {
+            if (tag.startsWith(`potato-app-${projectId}:`)) {
+              await this.dockerService.removeImage(tag).catch(() => {});
+              this.logger.log(`Deleted image tag ${tag} for project ${projectId}`);
+            }
+          }
+        }
+      }
     } catch (error) {
       this.logger.warn(`Failed to clean up image for project ${projectId}: ${error}`);
     }
