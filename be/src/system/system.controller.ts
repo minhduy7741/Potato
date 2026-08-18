@@ -1,9 +1,6 @@
-import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { SystemService } from './system.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('system')
 export class SystemController {
@@ -15,19 +12,24 @@ export class SystemController {
   }
 
   @Get('config')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  async getConfig() {
+  @UseGuards(JwtAuthGuard)
+  async getConfig(@Request() req: any) {
+    if (req.user?.role !== 'ADMIN' || req.user?.email !== 'superadmin@potato.com') {
+      throw new ForbiddenException('Chỉ SuperAdmin mới có quyền xem cấu hình này');
+    }
     return this.systemService.getConfig();
   }
 
   @Patch('config')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard)
   async updateConfig(
+    @Request() req: any,
     @Body('isChatbotEnabled') isChatbotEnabled?: boolean,
     @Body('chatbotSystemPrompt') chatbotSystemPrompt?: string,
   ) {
+    if (req.user?.role !== 'ADMIN' || req.user?.email !== 'superadmin@potato.com') {
+      throw new ForbiddenException('Chỉ SuperAdmin mới có quyền sửa cấu hình này');
+    }
     return this.systemService.updateConfig(isChatbotEnabled, chatbotSystemPrompt);
   }
 }
