@@ -165,16 +165,20 @@ export default function LoginPage() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="password">Mật khẩu</Label>
-                        <Link href="/forgot-password" className="text-sm font-medium text-primary hover:underline">Quên mật khẩu?</Link>
                       </div>
                       <div className="relative">
                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input id="password" name="password" type="password" placeholder="••••••••" className="pl-10 bg-background/50" required />
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2 pt-2">
-                      <input type="checkbox" id="remember" name="remember" defaultChecked className="rounded border-border bg-background h-4 w-4 text-primary focus:ring-primary/50" />
-                      <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground cursor-pointer">Ghi nhớ đăng nhập</Label>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center space-x-2">
+                        <input type="checkbox" id="remember" name="remember" defaultChecked className="rounded border-border bg-background h-4 w-4 text-primary focus:ring-primary/50" />
+                        <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground cursor-pointer">Ghi nhớ đăng nhập</Label>
+                      </div>
+                      <Link href="/forgot-password" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Quên mật khẩu?
+                      </Link>
                     </div>
                   </CardContent>
                   <CardFooter>
