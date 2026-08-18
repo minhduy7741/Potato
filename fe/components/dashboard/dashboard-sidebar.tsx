@@ -12,6 +12,7 @@ import {
   LogOut,
   Activity,
   Shield,
+  Bot,
 } from "lucide-react"
 import { PotatoLogo } from "@/components/potato-logo"
 import { Badge } from "@/components/ui/badge"
@@ -151,20 +152,33 @@ export function DashboardSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {showSystemStats && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === "/dashboard/system"}
-                    >
-                      <Link href="/dashboard/system" className="flex items-center gap-2">
-                        <Activity className="h-4 w-4" />
-                        <span>Giám sát hệ thống</span>
-                        <Badge className="ml-auto text-[9px] px-1 py-0 bg-amber-500/20 text-amber-400 border-amber-500/30">
-                          LIVE
-                        </Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === "/dashboard/system"}
+                      >
+                        <Link href="/dashboard/system" className="flex items-center gap-2">
+                          <Activity className="h-4 w-4" />
+                          <span>Giám sát hệ thống</span>
+                          <Badge className="ml-auto text-[9px] px-1 py-0 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                            LIVE
+                          </Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === "/dashboard/system/chatbot"}
+                      >
+                        <Link href="/dashboard/system/chatbot" className="flex items-center gap-2">
+                          <Bot className="h-4 w-4" />
+                          <span>AI Chatbot</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
                 )}
                 {showPermissions && (
                   <SidebarMenuItem>

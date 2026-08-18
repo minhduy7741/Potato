@@ -16,12 +16,22 @@ interface Message {
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isEnabled, setIsEnabled] = useState(true)
   const [messages, setMessages] = useState<Message[]>([
     { id: "welcome", role: "bot", content: "Chào bạn! Tôi là Potato Bot. Tôi có thể giúp gì cho bạn hôm nay?" }
   ])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // Gọi API lấy trạng thái bật tắt
+    apiFetch<any>("/system/config/public", { skipAuth: true })
+      .then((data) => {
+        setIsEnabled(data.isChatbotEnabled)
+      })
+      .catch(() => {})
+  }, [])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -71,6 +81,8 @@ export function ChatWidget() {
       setIsLoading(false)
     }
   }
+
+  if (!isEnabled) return null;
 
   return (
     <>
