@@ -601,7 +601,7 @@ export class ProjectsService {
       'project:read', 'project:start', 'project:stop', 'project:restart', 
       'project:hibernate', 'project:delete', 'project:settings', 
       'project:resources', 'project:deploy', 'env:read', 'env:write', 
-      'member:manage', 'database:manage'
+      'member:manage', 'database:manage', 'logs:read', 'domain:manage'
     ];
 
     if (userId) {
@@ -700,7 +700,7 @@ export class ProjectsService {
       'project:read', 'project:start', 'project:stop', 'project:restart', 
       'project:hibernate', 'project:delete', 'project:settings', 
       'project:resources', 'project:deploy', 'env:read', 'env:write', 
-      'member:manage', 'database:manage'
+      'member:manage', 'database:manage', 'logs:read', 'domain:manage'
     ];
 
     const finalPermissions = permissions || (role === 'LEADER' ? ALL_ACTIONS : ['project:read']);

@@ -236,7 +236,7 @@ export class ProjectsController {
   }
 
   @Patch(':id/domain')
-  @RequirePermission('project:settings')
+  @RequirePermission('domain:manage')
   async updateDomain(
     @Param('id', ParseIntPipe) id: number,
     @Body('customDomain') customDomain: string,
@@ -307,7 +307,7 @@ export class ProjectsController {
   }
 
   @Get(':id/logs/download')
-  @RequirePermission('project:read')
+  @RequirePermission('logs:read')
   async downloadLogs(@Param('id', ParseIntPipe) id: number) {
     this.logger.log(`GET /projects/${id}/logs/download`);
     const logs = await this.projectsService.getProjectLogs(id);
