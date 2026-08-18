@@ -9,6 +9,7 @@ import { InfrastructureModule } from './infrastructure/infrastructure.module';
 
 import { AuthModule } from './auth/auth.module';
 import { DatabasesModule } from './databases/databases.module';
+import { ChatModule } from './chat/chat.module';
 import { APP_PIPE } from '@nestjs/core';
 
 import { ScheduleModule } from '@nestjs/schedule';
@@ -22,7 +23,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     ProjectsModule, 
     InfrastructureModule, 
     AuthModule,
-    DatabasesModule
+    DatabasesModule,
+    ChatModule
   ],
   controllers: [AppController],
   providers: [AppService],
