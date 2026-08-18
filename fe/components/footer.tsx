@@ -5,27 +5,14 @@ import { Github, Twitter, Linkedin } from "lucide-react"
 const footerLinks = {
   "Sản phẩm": [
     { label: "Tính năng", href: "#features" },
-    { label: "Bảng giá", href: "#pricing" },
-    { label: "Nhật ký thay đổi", href: "#" },
-    { label: "Lộ trình", href: "#" },
+    { label: "Bắt đầu", href: "/login" },
   ],
-  "Tài nguyên": [
-    { label: "Tài liệu", href: "#docs" },
-    { label: "Tài liệu API", href: "#" },
-    { label: "Hướng dẫn", href: "#" },
-    { label: "Ví dụ", href: "#" },
-  ],
-  "Công ty": [
-    { label: "Về chúng tôi", href: "#about" },
-    { label: "Blog", href: "#" },
-    { label: "Tuyển dụng", href: "#" },
-    { label: "Liên hệ", href: "#" },
+  "Hỗ trợ": [
+    { label: "GitHub", href: "https://github.com/minhduy7741" },
   ],
   "Pháp lý": [
     { label: "Bảo mật", href: "#" },
     { label: "Điều khoản", href: "#" },
-    { label: "An toàn", href: "#" },
-    { label: "Cookies", href: "#" },
   ],
 }
 

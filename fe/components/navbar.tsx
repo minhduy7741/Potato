@@ -27,24 +27,6 @@ export function Navbar() {
             >
               Tính năng
             </Link>
-            <Link
-              href="#pricing"
-              className="text-sm text-muted-foreground transition-colors hover:text-primary"
-            >
-              Bảng giá
-            </Link>
-            <Link
-              href="#docs"
-              className="text-sm text-muted-foreground transition-colors hover:text-primary"
-            >
-              Tài liệu
-            </Link>
-            <Link
-              href="#about"
-              className="text-sm text-muted-foreground transition-colors hover:text-primary"
-            >
-              Về chúng tôi
-            </Link>
           </div>
 
           {/* Desktop CTA */}
@@ -81,27 +63,6 @@ export function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Tính năng
-              </Link>
-              <Link
-                href="#pricing"
-                className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Bảng giá
-              </Link>
-              <Link
-                href="#docs"
-                className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Tài liệu
-              </Link>
-              <Link
-                href="#about"
-                className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Về chúng tôi
               </Link>
               <div className="flex flex-col gap-2 pt-4">
                 <Button variant="ghost" className="w-full justify-start text-muted-foreground" asChild>
