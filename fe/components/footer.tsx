@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { PotatoLogo } from "@/components/potato-logo"
-import { Github, Twitter, Linkedin } from "lucide-react"
+import { Github } from "lucide-react"
 
 const footerLinks = {
   "Sản phẩm": [
@@ -9,11 +9,7 @@ const footerLinks = {
   ],
   "Hỗ trợ": [
     { label: "GitHub", href: "https://github.com/minhduy7741" },
-  ],
-  "Pháp lý": [
-    { label: "Bảo mật", href: "#" },
-    { label: "Điều khoản", href: "#" },
-  ],
+  ]
 }
 
 export function Footer() {
@@ -32,25 +28,13 @@ export function Footer() {
             </p>
             <div className="mt-6 flex gap-4">
               <a
-                href="#"
+                href="https://github.com/minhduy7741"
                 className="text-muted-foreground transition-colors hover:text-primary"
                 aria-label="GitHub"
+                target="_blank" 
+                rel="noreferrer"
               >
                 <Github className="h-5 w-5" />
-              </a>
-              <a
-                href="#"
-                className="text-muted-foreground transition-colors hover:text-primary"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a
-                href="#"
-                className="text-muted-foreground transition-colors hover:text-primary"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-5 w-5" />
               </a>
             </div>
           </div>
