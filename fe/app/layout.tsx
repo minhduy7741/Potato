@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   },
 }
 
+import { ChatWidget } from "@/components/chat-widget"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -24,6 +26,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
         {children}
+        <ChatWidget />
       </body>
     </html>
   )
