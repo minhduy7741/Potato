@@ -62,10 +62,7 @@ export class ChatService {
       // [GIẢI THÍCH LUỒNG: BƯỚC 3 - KHỞI TẠO MODEL VÀ GÁN PROMPT GỐC]
       // Lấy cấu hình System Prompt từ Database (được Admin thiết lập trong phần System Settings)
       // Để ra lệnh cho AI đóng vai chuyên gia hỗ trợ của nền tảng Potato.
-      const model = this.genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash',
-        systemInstruction: config.chatbotSystemPrompt
-      });
+      // (Khởi tạo bên dưới vòng lặp)
 
       // [GIẢI THÍCH LUỒNG: BƯỚC 4 - DỊCH LỊCH SỬ CHAT]
       // Chuyển đổi định dạng history của giao diện (Frontend) sang định dạng chuẩn mà Gemini API yêu cầu.
@@ -73,19 +70,47 @@ export class ChatService {
       // Gemini cần: [{role: 'user', parts: [{text: '...'}]}, {role: 'model', parts: [{text: '...'}]}]
       const formattedHistory = history.map(h => ({
         role: h.role === 'user' ? 'user' : 'model',
-        parts: [{ text: h.content }],
+        parts: [{ text: h.content }]
       }));
 
-      // [GIẢI THÍCH LUỒNG: BƯỚC 5 - GỬI YÊU CẦU CHO AI VÀ NHẬN KẾT QUẢ]
-      // Truyền lịch sử vào model.startChat() để AI có khả năng nhớ ngữ cảnh (memory) của cuộc trò chuyện.
-      const chat = model.startChat({
-        history: formattedHistory,
-      });
+      // Thử gọi các Model khác nhau nếu bị lỗi 404
+      const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro', 'gemini-1.5-pro'];
+      let answer = '';
+      let chatSession;
 
-      const result = await chat.sendMessage(message);
-      const answer = result.response.text();
+      for (const modelName of modelsToTry) {
+        try {
+          const model = this.genAI.getGenerativeModel({ 
+            model: modelName,
+            systemInstruction: config.chatbotSystemPrompt
+          });
 
-      // [GIẢI THÍCH LUỒNG: BƯỚC 6 - LƯU CACHE (LƯU VÀO RAM)]
+          // [GIẢI THÍCH LUỒNG: BƯỚC 5 - TẠO PHIÊN CHAT & GỬI]
+          chatSession = model.startChat({
+            history: formattedHistory,
+            generationConfig: {
+              maxOutputTokens: 2000,
+              temperature: 0.7, // Nhiệt độ 0.7 giúp câu trả lời tự nhiên, thân thiện nhưng vẫn chính xác
+            },
+          });
+
+          const result = await chatSession.sendMessage(message);
+          answer = result.response.text();
+          break; // Thành công thì thoát vòng lặp
+        } catch (err: any) {
+          if (err.message?.includes('404 Not Found')) {
+            this.logger.warn(`Model ${modelName} không khả dụng, thử model tiếp theo...`);
+            continue; // Thử model tiếp theo
+          }
+          throw err; // Ném lỗi nếu không phải 404
+        }
+      }
+
+      if (!answer) {
+         throw new Error("Tất cả các Model AI đều không khả dụng.");
+      }
+
+      // [GIẢI THÍCH LUỒNG: BƯỚC 6 - LƯU CACHE (NẾU ĐÁP ÁN ĐỦ NGẮN)]
       // Lưu lại kết quả vào cache để sử dụng cho lần sau.
       // Chỉ cache những câu hỏi dài (có ý nghĩa), tránh cache các câu quá ngắn như "chào", "hi" vì nó phụ thuộc ngữ cảnh.
       if (message.length > 5) {
