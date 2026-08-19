@@ -103,16 +103,18 @@ export class ChatService {
           answer = result.response.text();
           break; // Thành công thì thoát vòng lặp
         } catch (err: any) {
-          if (err.message?.includes('404 Not Found')) {
-            this.logger.warn(`Model ${modelName} không khả dụng, thử model tiếp theo...`);
+          const errMsg = err.message || '';
+          // Nếu model không tồn tại (404) hoặc máy chủ Google đang quá tải (503, 529) thì thử model tiếp theo
+          if (errMsg.includes('404 Not Found') || errMsg.includes('503 Service Unavailable') || errMsg.includes('529')) {
+            this.logger.warn(`Model ${modelName} đang lỗi/quá tải, tự động nhảy sang model tiếp theo...`);
             continue; // Thử model tiếp theo
           }
-          throw err; // Ném lỗi nếu không phải 404
+          throw err; // Ném lỗi nếu bị các lỗi nghiêm trọng như 400 Bad Request, 403 Forbidden
         }
       }
 
       if (!answer) {
-         throw new Error("Tất cả các Model AI đều không khả dụng.");
+         throw new Error("Tất cả các Model AI đều không khả dụng hoặc đang bị Google quá tải.");
       }
 
       // [GIẢI THÍCH LUỒNG: BƯỚC 6 - LƯU CACHE (NẾU ĐÁP ÁN ĐỦ NGẮN)]
