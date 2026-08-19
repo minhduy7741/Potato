@@ -73,15 +73,12 @@ export class ChatService {
         parts: [{ text: h.content }]
       }));
 
-      // Thử gọi các Model khác nhau nếu bị lỗi 404 (Google có thể đã xóa các model cũ trong năm 2026)
+      // Thử gọi các Model khác nhau nếu bị lỗi 404 (Google đã xóa các model cũ, nâng cấp lên 2.5 và 3.5)
       const modelsToTry = [
-        'gemini-2.0-flash', 
-        'gemini-2.0-pro', 
-        'gemini-3.0-flash', 
-        'gemini-flash', 
-        'gemini-1.5-flash', 
-        'gemini-1.5-flash-latest', 
-        'gemini-pro'
+        'gemini-flash-latest', 
+        'gemini-2.5-flash', 
+        'gemini-3.5-flash', 
+        'gemini-pro-latest'
       ];
       let answer = '';
       let chatSession;
