@@ -31,7 +31,7 @@ export class ChatService {
       .replace(/\s+/g, ' '); 
   }
 
-  async askChatbot(message: string, history: Array<{ role: string; content: string }> = []): Promise<string> {
+  async processMessage(message: string, history: Array<{ role: string; content: string }> = []): Promise<string> {
     const normalizedMessage = this.normalizeMessage(message);
     const cacheKey = `${normalizedMessage}_${history.length}`;
     if (this.cache.has(cacheKey)) {
