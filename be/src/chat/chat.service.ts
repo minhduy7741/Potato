@@ -75,8 +75,8 @@ export class ChatService {
 
       // Thử gọi các Model khác nhau nếu bị lỗi 404 (Google đã xóa các model cũ, nâng cấp lên 2.5 và 3.5)
       const modelsToTry = [
-        'gemini-flash-latest', 
         'gemini-2.5-flash', 
+        'gemini-flash-latest', 
         'gemini-3.5-flash', 
         'gemini-pro-latest'
       ];
