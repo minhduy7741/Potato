@@ -2314,8 +2314,12 @@ EXPOSE 80
   // --- CI/CD Webhook ---
 
   async getOrCreateWebhookSecret(projectId: number): Promise<string> {
+    // [GIẢI THÍCH LUỒNG: BƯỚC 1 - LẤY HOẶC TẠO SECRET KEY CHO WEBHOOK]
+    // Hàm này được gọi khi người dùng vào màn hình cài đặt Webhook trên Frontend.
+    // Hệ thống kiểm tra xem dự án đã có secret key (chìa khóa bí mật) chưa.
     let project = await this.findProjectOrFail(projectId);
     if (!project.webhookSecret) {
+      // Nếu chưa có, tạo ngẫu nhiên một chuỗi hex 64 ký tự để làm secret key.
       const newSecret = randomBytes(32).toString('hex');
       project = await this.prisma.project.update({
         where: { id: projectId },
@@ -2327,6 +2331,9 @@ EXPOSE 80
   }
 
   async regenerateWebhookSecret(projectId: number): Promise<string> {
+    // [GIẢI THÍCH LUỒNG: TẠO LẠI SECRET KEY]
+    // Dành cho trường hợp người dùng lỡ để lộ secret key, họ có thể bấm nút "Regenerate".
+    // Hệ thống sẽ sinh key mới ghi đè lên key cũ trong Database.
     await this.findProjectOrFail(projectId);
     const newSecret = randomBytes(32).toString('hex');
     const project = await this.prisma.project.update({
@@ -2337,6 +2344,8 @@ EXPOSE 80
   }
 
   async handleWebhook(projectId: number, token: string, payload: any): Promise<{ message: string }> {
+    // [GIẢI THÍCH LUỒNG: BƯỚC 2 - NHẬN SỰ KIỆN TỪ GITHUB/GITLAB (WEBHOOK)]
+    // Khi lập trình viên push code lên Github, Github sẽ gọi tự động (POST) vào API này.
     const project = await this.prisma.project.findUnique({
       where: { id: projectId }
     });
@@ -2345,6 +2354,9 @@ EXPOSE 80
       throw new NotFoundException(`Project not found`);
     }
 
+    // [GIẢI THÍCH LUỒNG: BƯỚC 3 - XÁC THỰC BẢO MẬT]
+    // Kiểm tra xem token Github gửi sang có khớp với secret key trong Database không.
+    // Điều này để tránh việc có người cố tình gọi API phá hoại.
     if (!project.webhookSecret || project.webhookSecret !== token) {
       throw new BadRequestException(`Invalid webhook token`);
     }
@@ -2353,10 +2365,13 @@ EXPOSE 80
       throw new BadRequestException(`Project is not configured for Git deployment`);
     }
 
-    // Check payload (supports GitHub/GitLab basic pushes)
-    const ref = payload.ref; // e.g., 'refs/heads/main'
+    // [GIẢI THÍCH LUỒNG: BƯỚC 4 - KIỂM TRA BRANCH CÓ ĐÚNG KHÔNG]
+    // Xem sự kiện push này là push lên nhánh (branch) nào.
+    const ref = payload.ref; // ví dụ: 'refs/heads/main'
     const expectedRef = `refs/heads/${project.deployBranch}`;
     
+    // Nếu push lên nhánh khác (ví dụ 'dev') mà dự án chỉ cấu hình deploy cho nhánh 'main', 
+    // thì hệ thống sẽ bỏ qua sự kiện này và không làm gì cả.
     if (ref && ref !== expectedRef) {
       this.logger.log(`Webhook ignored for project ${projectId}. Push was to ${ref}, expected ${expectedRef}`);
       return { message: 'Ignored: push to different branch' };
@@ -2364,7 +2379,8 @@ EXPOSE 80
 
     this.logger.log(`Webhook triggered deployment for project ${projectId}`);
     
-    // Trigger deployment
+    // [GIẢI THÍCH LUỒNG: BƯỚC 5 - KÍCH HOẠT TỰ ĐỘNG DEPLOY (CI/CD)]
+    // Nếu mọi thứ hợp lệ, gọi hàm deploy lại từ Git. Server sẽ tự động clone code mới và khởi động lại dự án.
     await this.deployFromGit(projectId, project.gitRepo, project.deployBranch, project.gitToken || undefined);
 
     return { message: 'Deployment triggered successfully' };

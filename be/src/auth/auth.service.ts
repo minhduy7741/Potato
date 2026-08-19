@@ -103,18 +103,23 @@ export class AuthService {
   // ─── Reset Password ──────────────────────────────────────────────────
 
   async forgotPassword(email: string) {
+    // [GIẢI THÍCH LUỒNG: BƯỚC 1 - TÌM TÀI KHOẢN]
+    // Hàm này sẽ kiểm tra xem email người dùng nhập vào có tồn tại trong Database hay không.
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      // Vì lý do bảo mật, không báo lỗi nếu email không tồn tại
+      // Vì lý do bảo mật, không báo lỗi nếu email không tồn tại để tránh lộ thông tin người dùng.
       return { message: 'Nếu email tồn tại, một đường link khôi phục đã được gửi.' };
     }
 
-    // Tạo token ngẫu nhiên
+    // [GIẢI THÍCH LUỒNG: BƯỚC 2 - TẠO MÃ BẢO MẬT (TOKEN)]
+    // Tạo token ngẫu nhiên (dài 64 ký tự hex) để làm link đổi mật khẩu.
     const crypto = require('crypto');
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date();
     resetTokenExpiry.setMinutes(resetTokenExpiry.getMinutes() + 15); // Hết hạn sau 15 phút
 
+    // [GIẢI THÍCH LUỒNG: BƯỚC 3 - LƯU TOKEN VÀO DATABASE]
+    // Cập nhật token và thời gian hết hạn vào thông tin của người dùng.
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -123,16 +128,21 @@ export class AuthService {
       },
     });
 
+    // [GIẢI THÍCH LUỒNG: BƯỚC 4 - GỬI EMAIL CHỨA LINK KHÔI PHỤC]
+    // Gọi tới MailService để gửi email chứa đường link (ví dụ: http://localhost:3000/reset-password?token=...)
     await this.mailService.sendPasswordResetEmail(user.email, resetToken);
 
     return { message: 'Nếu email tồn tại, một đường link khôi phục đã được gửi.' };
   }
 
   async resetPassword(token: string, newPassword: string) {
+    // [GIẢI THÍCH LUỒNG: BƯỚC 5 - NGƯỜI DÙNG BẤM LINK VÀ NHẬP PASS MỚI]
     if (newPassword.length < 6) {
       throw new BadRequestException('Mật khẩu mới phải có ít nhất 6 ký tự');
     }
 
+    // [GIẢI THÍCH LUỒNG: BƯỚC 6 - KIỂM TRA TOKEN]
+    // Tìm người dùng có token khớp với token gửi lên và token đó vẫn còn hạn (resetPasswordExpires > Date.now())
     const user = await this.prisma.user.findFirst({
       where: {
         resetPasswordToken: token,
@@ -144,8 +154,11 @@ export class AuthService {
       throw new BadRequestException('Mã khôi phục không hợp lệ hoặc đã hết hạn.');
     }
 
+    // [GIẢI THÍCH LUỒNG: BƯỚC 7 - ĐỔI MẬT KHẨU & XÓA TOKEN]
+    // Mã hóa mật khẩu mới trước khi lưu.
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+    // Cập nhật mật khẩu và quan trọng nhất: xóa token đi để không bị dùng lại lần 2 (ngừa tấn công Replay Attack).
     await this.prisma.user.update({
       where: { id: user.id },
       data: {

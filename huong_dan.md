@@ -17,16 +17,19 @@ Cho phép người dùng nhập link GitHub, hệ thống tự động tải cod
     - `buildDockerImage`: Gọi Docker để đóng gói mã nguồn thành Image.
     - `createContainer`: Khởi tạo và chạy ứng dụng cách ly trong Container.
 
-### 2. Triển khai Database (Database Provisioning)
-Cấp phát nhanh các cơ sở dữ liệu (PostgreSQL, MySQL, Redis...) cho người dùng chỉ bằng một cú click chuột.
+### 2. Triển khai Database Hiện đại (Modern Database Provisioning)
+Cấp phát nhanh các cơ sở dữ liệu (PostgreSQL, MySQL, MongoDB, Redis) cho người dùng theo chuẩn kiến trúc của các PaaS lớn như Vercel/Render.
 - **Frontend (FE):**
   - **Vị trí trên giao diện:** Trang Quản lý / Tạo mới Database.
   - **Trang chính:** [page.tsx](file:///e:/Potato/fe/app/dashboard/databases/page.tsx)
   - **Popup tạo Database:** [create-database-modal.tsx](file:///e:/Potato/fe/components/dashboard/create-database-modal.tsx)
 - **Backend (BE):**
-  - **File:** [databases.service.ts](file:///e:/Potato/be/src/databases/databases.service.ts)
-  - **Hàm chính:** `provisionDatabase`
-  - **Logic:** Tự động tạo mật khẩu ngẫu nhiên, kéo (pull) image cơ sở dữ liệu tương ứng và khởi động container chứa Database độc lập.
+  - **File:** [databases.service.ts](file:///e:/Potato/be/src/databases/databases.service.ts) và [stats-collector.service.ts](file:///e:/Potato/be/src/projects/stats-collector.service.ts)
+  - **Hàm chính:** `provisionDatabaseBackground` (Tạo DB) và `collectStats` (Giám sát DB)
+  - **Các cơ chế nổi bật (Under the hood):** 
+    1. **Tự động bơm cấu hình (Auto-Inject):** Tự động sinh cả biến rời (`DB_HOST`, `DB_PORT`) cho PHP/Laravel và biến gộp (`DATABASE_URL`) cho Node.js/Prisma/Python, sau đó nhét thẳng vào dự án để lập trình viên xài luôn không cần cấu hình.
+    2. **Mô phỏng Connection Pooling:** Tự động chèn cờ `--max_connections=100` và giới hạn cứng RAM ở 512MB lúc tạo Container. Cơ chế này chống lại các cuộc tấn công cạn kiệt tài nguyên hoặc lỗi vòng lặp gọi DB làm sập máy chủ.
+    3. **Ngủ đông tiết kiệm RAM (Scale to Zero):** Bot giám sát chạy mỗi 60 giây. Nếu phát hiện Database không có ai truy cập (CPU < 0.1%), hệ thống tự động tạm dừng (Pause) Container DB đó để thu hồi RAM trả về cho máy chủ. Giải quyết triệt để bài toán thiếu RAM khi host nhiều dự án.
 
 ### 3. Quản lý Biến Môi Trường (Environment Variables)
 Cho phép người dùng cấu hình các biến bảo mật (API Key, DB Host) để nhúng vào ứng dụng lúc đang chạy.
@@ -102,6 +105,50 @@ Bảo mật hệ thống bằng mã thông báo (JSON Web Token - JWT) và phân
   - **Cơ chế (Logic):** 
     - Khi người dùng đăng nhập thành công, hệ thống sử dụng thư viện `@nestjs/jwt` để mã hóa thông tin (ID, Email, Role) thành 1 chuỗi **JWT Token** bí mật trả về cho Frontend. 
     - Frontend lưu chuỗi này lại. Từ đó về sau, mỗi khi gọi API, Frontend bắt buộc phải gửi kèm cái Token này lên (qua Header) để Backend xác thực định danh.
+
+### 9. Trình quản trị Cơ sở dữ liệu trực tuyến (Web SQL Editor)
+Cho phép lập trình viên chạy các câu lệnh truy vấn SQL (tạo bảng, chèn dữ liệu, xem bảng) trực tiếp trên trình duyệt mà không cần cài thêm phần mềm DBeaver hay Navicat, cũng không cần bắt buộc phải import file `.sql`.
+- **Frontend (FE):**
+  - **Vị trí trên giao diện:** Trong trang chi tiết Database, có một ô nhập Query.
+- **Backend (BE):**
+  - **File:** [databases.service.ts](file:///e:/Potato/be/src/databases/databases.service.ts)
+  - **Hàm chính:** `runQuery`
+  - **Logic hoạt động:**
+    - Khách hàng gõ truy vấn SQL (VD: `SHOW TABLES;` hoặc `CREATE TABLE...`) vào ô nhập liệu.
+    - Backend ghi câu lệnh đó ra một file tạm (`.sql`).
+    - Gọi hàm `docker exec` để đẩy thẳng file tạm này vào bên trong Container Database đang chạy và thực thi siêu tốc. Kết quả sẽ được định dạng lại thành bảng (Rows & Columns) trả về cho Frontend.
+
+### 10. Tự động triển khai CI/CD & Rollback (Webhook)
+Giúp người dùng tự động cập nhật web khi có code mới trên Github, và khôi phục bản cũ nếu code lỗi.
+- **Frontend (FE):**
+  - **Vị trí trên giao diện:** Tab Cài đặt (Settings) của dự án.
+- **Backend (BE):**
+  - **File:** [projects.service.ts](file:///e:/Potato/be/src/projects/projects.service.ts)
+  - **Hàm chính:** `handleWebhook` và `rollbackProject`
+  - **Logic hoạt động:**
+    - Tạo một Secret Token. Nhận sự kiện push code từ Github qua webhook.
+    - Kích hoạt quy trình tải code và build Docker y hệt mục 1.
+    - Có cơ chế **Zero-Downtime**: Chạy container mới, kiểm tra HTTP ping 15s. Nếu sống thì trỏ Nginx qua và xóa container cũ. Nếu lỗi thì xóa container mới, giữ nguyên bản cũ.
+
+### 11. Trợ lý ảo AI Chatbot (Google Gemini)
+Trợ lý AI giúp giải đáp thắc mắc, viết giùm Dockerfile chuẩn cho khách.
+- **Frontend (FE):**
+  - **Vị trí trên giao diện:** Khung Chat Widget trôi ở góc phải màn hình.
+  - **Component:** [chat-widget.tsx](file:///e:/Potato/fe/components/chat-widget.tsx)
+- **Backend (BE):**
+  - **File:** [chat.service.ts](file:///e:/Potato/be/src/chat/chat.service.ts)
+  - **Logic hoạt động:**
+    - Có cơ chế **LRU Cache (Bộ nhớ đệm chống tràn RAM)**: Lưu trực tiếp cặp Câu hỏi-Trả lời vào đối tượng `Map` của Node.js. 
+    - Giới hạn lưu 1000 câu, xóa câu cũ nhất để chống tràn RAM máy chủ. Trả lời tức thì ở tốc độ 0ms không tốn phí API.
+
+### 12. Bảo mật Quên & Khôi phục Mật khẩu (Auth Mailer)
+- **Frontend (FE):**
+  - **Vị trí trên giao diện:** Trang `/forgot-password` và `/reset-password`.
+- **Backend (BE):**
+  - **File:** [auth.service.ts](file:///e:/Potato/be/src/auth/auth.service.ts) và [mail.service.ts](file:///e:/Potato/be/src/mail/mail.service.ts)
+  - **Logic hoạt động:**
+    - Sinh mã bảo vệ ngẫu nhiên (64 kí tự), lưu vào DB giới hạn 15 phút. Gửi mail qua Nodemailer.
+    - **Anti-Replay Attack:** Ngay khi khách đổi pass thành công, mã token bị đặt thành null trong DB để vô hiệu hóa hoàn toàn link cũ.
 
 ---
 
@@ -187,6 +234,14 @@ CMD ["./main"]
 ```
 - **Nơi dán code 2 (Vẽ giao diện HTML):** Cuộn xuống dưới (khoảng **dòng 60**), tìm đoạn code vẽ thẻ `<Input>` của tên dự án (`Project Name`), và dán khối này ngay bên dưới nó:
 ```tsx
+          <div className="grid gap-2">
+            <Label htmlFor="description">Mô tả dự án (Tùy chọn)</Label>
+            <Input 
+              id="description" 
+              placeholder="Nhập mô tả ngắn gọn..." 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)} 
+            />
           </div>
 ```
 

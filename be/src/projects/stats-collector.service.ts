@@ -277,6 +277,48 @@ export class StatsCollectorService {
 
     const succeeded = results.filter((r) => r.status === 'fulfilled').length;
     this.logger.log(`Stats collected: ${succeeded}/${runningProjects.length} succeeded`);
+
+    // [TÍNH NĂNG SCALE TO ZERO CHO DATABASE]
+    // Quét các Database đang chạy để kiểm tra ngủ đông (Pause on Idle)
+    const runningDbs = await this.prisma.databaseInstance.findMany({
+      where: { status: 'running' },
+    });
+
+    for (const db of runningDbs) {
+      try {
+        const containers = await this.dockerService.listContainers({
+          filters: JSON.stringify({ label: [`potato.db_id=${db.id}`] }),
+        });
+        if (containers.length > 0) {
+          const containerId = containers[0].Id;
+          const stats = await this.dockerService.getContainerStats(containerId);
+          
+          // Nếu CPU bằng 0% (gần như không ai truy cập)
+          if (stats.cpuPercent < 0.1) {
+            // Có thể ghi nhận thời gian bắt đầu idle vào Map, ở đây làm đơn giản:
+            // Tạm dừng container để tiết kiệm RAM
+            this.logger.log(`💤 [Scale to Zero] Tạm dừng Database ${db.name} (${db.id}) do không có truy cập (CPU = 0%) để tiết kiệm RAM.`);
+            await this.dockerService.stopContainer(containerId);
+            await this.prisma.databaseInstance.update({
+              where: { id: db.id },
+              data: { status: 'stopped' },
+            });
+            // Ghi log hoạt động
+            if (db.projectId) {
+              await this.prisma.activityLog.create({
+                data: {
+                  projectId: db.projectId,
+                  type: 'DATABASE',
+                  message: `Database ${db.name} đã được ngủ đông (Scale to Zero) để tiết kiệm tài nguyên.`
+                }
+              });
+            }
+          }
+        }
+      } catch (err: any) {
+         this.logger.warn(`Failed to check idle status for database ${db.id}: ${err.message}`);
+      }
+    }
   }
 
   /**

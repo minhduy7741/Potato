@@ -25,9 +25,13 @@ export class MailService {
   }
 
   async sendPasswordResetEmail(to: string, token: string) {
+    // [GIẢI THÍCH LUỒNG: BƯỚC 1 - CHUẨN BỊ LINK KHÔI PHỤC]
+    // Lấy tên miền của Frontend (mặc định localhost:3000) và nối token bảo mật vào.
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetLink = `${frontendUrl}/reset-password?token=${token}`;
     
+    // [GIẢI THÍCH LUỒNG: BƯỚC 2 - THIẾT KẾ TEMPLATE EMAIL]
+    // Sử dụng HTML CSS thuần để tạo form email đẹp mắt.
     const mailOptions = {
       from: `"Potato PaaS" <${process.env.SMTP_USER || 'noreply@potato.local'}>`,
       to: to,
@@ -51,6 +55,7 @@ export class MailService {
       `,
     };
 
+    // [GIẢI THÍCH LUỒNG: BƯỚC 3 - THỰC THI GỬI MAIL]
     if (this.transporter) {
       try {
         await this.transporter.sendMail(mailOptions);
@@ -60,7 +65,9 @@ export class MailService {
         throw new Error('Không thể gửi email. Vui lòng thử lại sau.');
       }
     } else {
-      // Chế độ dev: Chỉ in link ra console
+      // [GIẢI THÍCH LUỒNG: BƯỚC DỰ PHÒNG (DEV MODE)]
+      // Nếu Admin chưa cấu hình tài khoản SMTP, hệ thống sẽ không lỗi mà chỉ in đường link ra Console.
+      // Tiện lợi cho việc test ở môi trường local (chỉ việc copy từ màn hình console).
       this.logger.debug(`[DEV MODE] Password reset link for ${to}: ${resetLink}`);
     }
   }

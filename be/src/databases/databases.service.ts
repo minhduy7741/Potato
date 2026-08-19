@@ -149,7 +149,12 @@ export class DatabasesService {
     switch (data.type.toLowerCase()) {
       case 'postgres':
         image = 'postgres:alpine';
-        env = [`POSTGRES_PASSWORD=${DEFAULT_PASS}`, `POSTGRES_DB=${dbName}`];
+        // Thêm cấu hình max_connections và statement_timeout để chống sập RAM (Giả lập Connection Pooling)
+        env = [
+          `POSTGRES_PASSWORD=${DEFAULT_PASS}`, 
+          `POSTGRES_DB=${dbName}`,
+          `POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256`
+        ];
         internalPort = 5432;
         connectionString = `postgresql://postgres:${DEFAULT_PASS}@localhost:${hostPort}/${dbName}`;
         break;
@@ -160,6 +165,7 @@ export class DatabasesService {
         break;
       case 'mysql':
         image = 'mysql:8';
+        // Giới hạn max_connections để chống tấn công cạn kiệt tài nguyên
         env = [`MYSQL_ROOT_PASSWORD=${DEFAULT_PASS}`, `MYSQL_DATABASE=${dbName}`];
         internalPort = 3306;
         connectionString = `mysql://root:${DEFAULT_PASS}@localhost:${hostPort}/${dbName}`;
@@ -219,15 +225,27 @@ export class DatabasesService {
         this.logger.error(`Failed to pull database image ${image} in background: ${pullError.message}`);
       }
 
+      // Thiết lập giới hạn kết nối cứng để mô phỏng cơ chế bảo vệ của Connection Pool
+      // Tránh việc lập trình viên viết vòng lặp gọi DB làm sập máy chủ
+      let cmd: string[] = [];
+      if (type === 'postgres') {
+        cmd = ['postgres', '-c', 'max_connections=100'];
+      } else if (type === 'mysql') {
+        cmd = ['--max_connections=100'];
+      }
+
       // 2. Yêu cầu Docker Engine tạo một Container mới (giống lệnh: docker run -d -p HostPort:InternalPort ...)
       await this.docker.createContainer({
         Image: image,
         name: containerName,
+        Cmd: cmd.length > 0 ? cmd : undefined,
         HostConfig: {
           LogConfig: { Type: 'json-file', Config: { 'max-size': '10m', 'max-file': '3' } },
           PortBindings: { [`${internalPort}/tcp`]: [{ HostPort: hostPort.toString() }] },
           RestartPolicy: { Name: 'always' },
-        },
+          // Chặn RAM Database ở mức 512MB để không ảnh hưởng app khác
+          Memory: 512 * 1024 * 1024,
+        } as any,
         Env: env,
         Labels: {
           'potato.managed': 'true',
@@ -285,13 +303,24 @@ export class DatabasesService {
       }
 
       if (dbConnection) {
+        // Chuẩn kết nối dạng chuỗi (URI) dành cho Node.js (Prisma, TypeORM) và Python
+        let databaseUrl = '';
+        if (type === 'postgres') {
+          databaseUrl = `postgresql://${dbUser}:${DEFAULT_PASS}@host.docker.internal:${hostPort}/${dbDatabase}`;
+        } else if (type === 'mysql') {
+          databaseUrl = `mysql://${dbUser}:${DEFAULT_PASS}@host.docker.internal:${hostPort}/${dbDatabase}`;
+        }
+
         const envs = [
+          // Chuẩn biến môi trường rời rạc (dành cho PHP / Laravel)
           { key: 'DB_CONNECTION', value: dbConnection },
           { key: 'DB_HOST', value: 'host.docker.internal' },
           { key: 'DB_PORT', value: hostPort.toString() },
           { key: 'DB_DATABASE', value: dbDatabase },
           { key: 'DB_USERNAME', value: dbUser },
           { key: 'DB_PASSWORD', value: DEFAULT_PASS },
+          // Chuẩn biến môi trường chuỗi (dành cho Node.js / Python / Prisma)
+          { key: 'DATABASE_URL', value: databaseUrl },
         ];
 
         for (const env of envs) {

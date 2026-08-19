@@ -6,10 +6,13 @@ export class SystemService {
   constructor(private prisma: PrismaService) {}
 
   async getConfig() {
+    // [GIẢI THÍCH LUỒNG: LẤY CẤU HÌNH HỆ THỐNG]
+    // Tìm cấu hình hệ thống (Id luôn là 1 vì chỉ có 1 bản ghi cấu hình duy nhất)
     let config = await this.prisma.systemConfig.findUnique({
       where: { id: 1 },
     });
 
+    // Nếu hệ thống chạy lần đầu tiên (chưa có cấu hình), sẽ tự động khởi tạo dữ liệu mặc định.
     if (!config) {
       config = await this.prisma.systemConfig.create({
         data: {
@@ -38,9 +41,11 @@ Luật giao tiếp:
   }
 
   async updateConfig(isChatbotEnabled?: boolean, chatbotSystemPrompt?: string) {
-    // Đảm bảo config tồn tại trước khi update
+    // [GIẢI THÍCH LUỒNG: CẬP NHẬT CẤU HÌNH BỞI SUPER ADMIN]
+    // Đảm bảo config tồn tại trước khi update, nếu chưa có thì hàm getConfig() tự động tạo.
     await this.getConfig();
     
+    // Chỉ cập nhật những trường nào được gửi lên (không undefined)
     return this.prisma.systemConfig.update({
       where: { id: 1 },
       data: {
