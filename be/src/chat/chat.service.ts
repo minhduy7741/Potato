@@ -51,8 +51,36 @@ export class ChatService {
 
       let answer = '';
 
-      // Tầng 1: Thử gọi Google Gemini trước (Nếu có cấu hình)
-      if (this.genAI) {
+      // Tầng 1: Thử gọi Groq trước vì tốc độ phản hồi cực kỳ nhanh (LPU siêu tốc)
+      if (this.groq) {
+        this.logger.log(`[API CALL] Gọi Groq AI (Llama 3.3) cho câu hỏi: "${message}"`);
+        
+        const messages: any[] = [
+          { role: 'system', content: config.chatbotSystemPrompt }
+        ];
+        for (const msg of history) {
+          messages.push({
+            role: msg.role === 'bot' ? 'assistant' : 'user',
+            content: msg.content
+          });
+        }
+        messages.push({ role: 'user', content: message });
+
+        try {
+          const completion = await this.groq.chat.completions.create({
+            messages,
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.7,
+            max_tokens: 2000,
+          });
+          answer = completion.choices[0]?.message?.content || '';
+        } catch (err: any) {
+          this.logger.warn(`Lỗi khi gọi Groq AI (Rate limit/Quá tải): ${err.message}. Tự động nhảy sang Google Gemini...`);
+        }
+      }
+
+      // Tầng 2: Thử gọi Google Gemini nếu Groq sập, quá tải (Rate limit), hoặc chưa cấu hình
+      if (!answer && this.genAI) {
         this.logger.log(`[API CALL] Gọi Google Gemini cho câu hỏi: "${message}"`);
         const formattedHistory = history.map(h => ({
           role: h.role === 'user' ? 'user' : 'model',
@@ -85,45 +113,16 @@ export class ChatService {
 
             const result = await chatSession.sendMessage(message);
             answer = result.response.text();
-            if (answer) break; // Thành công thì thoát vòng lặp
+            if (answer) break; 
           } catch (err: any) {
             const errMsg = err.message || '';
             if (errMsg.includes('404 Not Found') || errMsg.includes('503 Service Unavailable') || errMsg.includes('529')) {
               this.logger.warn(`Gemini Model ${modelName} đang lỗi/quá tải, nhảy sang model tiếp theo...`);
               continue;
             }
-            // Không break ở đây, để nó rơi xuống tầng 2 (Groq) nếu Gemini sập hoàn toàn
             this.logger.warn(`Gemini lỗi nặng: ${errMsg}`);
             break;
           }
-        }
-      }
-
-      // Tầng 2: Thử gọi Groq nếu Gemini sập hoặc không được cấu hình (Và có cấu hình Groq)
-      if (!answer && this.groq) {
-        this.logger.warn(`[API CALL] Google Gemini thất bại hoặc thiếu cấu hình. Chuyển sang Groq AI (Llama 3.3)...`);
-        
-        const messages: any[] = [
-          { role: 'system', content: config.chatbotSystemPrompt }
-        ];
-        for (const msg of history) {
-          messages.push({
-            role: msg.role === 'bot' ? 'assistant' : 'user',
-            content: msg.content
-          });
-        }
-        messages.push({ role: 'user', content: message });
-
-        try {
-          const completion = await this.groq.chat.completions.create({
-            messages,
-            model: 'llama-3.3-70b-versatile',
-            temperature: 0.7,
-            max_tokens: 2000,
-          });
-          answer = completion.choices[0]?.message?.content || '';
-        } catch (err: any) {
-          this.logger.error(`Lỗi khi gọi Groq AI: ${err.message}`);
         }
       }
 
