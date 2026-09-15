@@ -6,12 +6,24 @@ be/dist/
 fe/.next/
 *.tsbuildinfo
 
+# Environment files (NEVER commit these - contains secrets!)
+.env
+.env.*
+!.env.example
+
+# Database files
+*.db
+*.sqlite
+
 # Uploads and temporary data
 be/uploads/
 be/scratch/
 
 # Dynamic configurations
 be/nginx_configs/
+
+# Debug scripts
+be/query-*.js
 
 # OS files
 .DS_Store
